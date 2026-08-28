@@ -1,0 +1,6 @@
+
+Referência Tabuas de Vidas:
+https://ftp.ibge.gov.br/Projecao_da_Populacao/Projecao_da_Populacao_2024/projecoes_2024_tab5_tabuas_mortalidade.xlsx
+
+Referência Pop por Região e Sexo:
+Portal TABNET
