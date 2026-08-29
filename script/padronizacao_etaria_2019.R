@@ -1,0 +1,925 @@
+#-------------------------------------------------------------------------------
+# PADRONIZAÇÃO ETÁRIA DAS PREVALÊNCIAS DE SOBREPESO E OBESIDADE
+# Projeções da População do IBGE, revisão 2024
+# TCC Ciências Sociais
+# Felipe Casula, 2026
+#-------------------------------------------------------------------------------
+rm(list = ls(all = TRUE))
+
+#--- Bibliotecas ---------------------------------------------------------------
+
+if (!requireNamespace("pacman", quietly = TRUE)) {
+  install.packages("pacman")
+}
+
+pacman::p_load(
+  tidyverse,
+  janitor,
+  readxl
+)
+
+#--- Arquivos utilizados -------------------------------------------------------
+
+# Este arquivo é produzido pelo script de estimação das prevalências.
+# Ele precisa conter uma linha para cada combinação de:
+# pesquisa x sexo x indicador x grupo etário.
+arquivo_prevalencias <- paste0(
+  "dados/output/prevalencias/",
+  "prevalencias_sexo_idade_2003_2019.csv"
+)
+
+# Projeções da População do IBGE, revisão 2024.
+# Tabela 1: população por sexo e idade simples, 2000 a 2070.
+# No produto, 2000-2022 são estimativas e 2023-2070 são projeções. As
+# populações têm como data de referência 1º de julho de cada ano.
+url_projecoes_populacao <- paste0(
+  "https://ftp.ibge.gov.br/Projecao_da_Populacao/",
+  "Projecao_da_Populacao_2024/",
+  "projecoes_2024_tab1_idade_simples.xlsx"
+)
+
+arquivo_projecoes_populacao <- paste0(
+  "dados/raw/populacao/",
+  "projecoes_2024_tab1_idade_simples.xlsx"
+)
+
+diretorio_tabelas <- "dados/output/prevalencias"
+diretorio_figuras <- "output/graficos_prevalencia"
+
+if (!file.exists(arquivo_prevalencias)) {
+  stop(
+    "O arquivo com as prevalências por idade não foi encontrado: ",
+    arquivo_prevalencias,
+    "\nExecute primeiro o script estimacao_prevalencia.R."
+  )
+}
+
+if (!file.exists(arquivo_projecoes_populacao)) {
+  dir.create(
+    dirname(arquivo_projecoes_populacao),
+    recursive = TRUE,
+    showWarnings = FALSE
+  )
+  
+  message(
+    "Baixando as Projeções da População do IBGE, revisão 2024..."
+  )
+  
+  download.file(
+    url = url_projecoes_populacao,
+    destfile = arquivo_projecoes_populacao,
+    mode = "wb",
+    quiet = FALSE
+  )
+}
+
+
+#--- Definições da análise -----------------------------------------------------
+
+# A POF 2017-2018 não integra esta análise.
+pesquisas_analisadas <- c(
+  "POF 2002-2003",
+  "POF 2008-2009",
+  "PNS 2013",
+  "PNS 2019"
+)
+
+anos_analisados <- c(
+  2003L,
+  2009L,
+  2013L,
+  2019L
+)
+
+# Os mesmos sete grupos devem ter sido utilizados no script de estimação.
+faixas_idade <- c(
+  "20-29",
+  "30-39",
+  "40-49",
+  "50-59",
+  "60-69",
+  "70-79",
+  "80+"
+)
+
+
+#--- Resultados estimados por grupo etário ------------------------------------
+
+prevalencias_idade <- read_csv(
+  arquivo_prevalencias,
+  show_col_types = FALSE
+) |>
+  filter(
+    pesquisa %in% pesquisas_analisadas
+  ) |>
+  transmute(
+    pesquisa = as.character(pesquisa),
+    ano = as.integer(ano),
+    sexo = as.character(sexo),
+    faixa_idade = as.character(faixa_idade),
+    indicador = as.character(indicador),
+    estimativa = as.numeric(estimativa),
+    erro_padrao = as.numeric(erro_padrao),
+    ic_inferior = as.numeric(ic_inferior),
+    ic_superior = as.numeric(ic_superior)
+  )
+
+# A padronização só pode ser executada depois que o script principal for
+# atualizado para os grupos decenais. Esta verificação evita misturar grupos
+# quinquenais e decenais inadvertidamente.
+faixas_encontradas <- sort(unique(prevalencias_idade$faixa_idade))
+
+if (!setequal(faixas_encontradas, faixas_idade)) {
+  stop(
+    "Os grupos etários do arquivo de prevalências não são os esperados.",
+    "\nEsperados: ", paste(faixas_idade, collapse = ", "),
+    "\nEncontrados: ", paste(faixas_encontradas, collapse = ", "),
+    "\nAtualize e execute novamente estimacao_prevalencia.R."
+  )
+}
+
+pesquisas_ausentes <- setdiff(
+  pesquisas_analisadas,
+  unique(prevalencias_idade$pesquisa)
+)
+
+if (length(pesquisas_ausentes) > 0) {
+  stop(
+    "Pesquisas ausentes no arquivo de prevalências: ",
+    paste(pesquisas_ausentes, collapse = ", ")
+  )
+}
+
+if (!setequal(unique(prevalencias_idade$ano), anos_analisados)) {
+  stop(
+    "Os anos do arquivo de prevalências não correspondem a 2003, 2009, ",
+    "2013 e 2019."
+  )
+}
+
+# Cada célula analítica deve aparecer somente uma vez.
+celulas_duplicadas <- prevalencias_idade |>
+  count(
+    pesquisa,
+    sexo,
+    indicador,
+    faixa_idade,
+    name = "numero_linhas"
+  ) |>
+  filter(numero_linhas != 1)
+
+if (nrow(celulas_duplicadas) > 0) {
+  stop(
+    "Existem células duplicadas no arquivo de prevalências."
+  )
+}
+
+celulas_incompletas <- prevalencias_idade |>
+  count(
+    pesquisa,
+    sexo,
+    indicador,
+    name = "numero_faixas"
+  ) |>
+  filter(numero_faixas != length(faixas_idade))
+
+if (nrow(celulas_incompletas) > 0) {
+  stop(
+    "Existem combinações de pesquisa, sexo e indicador sem as sete faixas ",
+    "etárias esperadas."
+  )
+}
+
+if (
+  any(!is.finite(prevalencias_idade$estimativa)) ||
+  any(!is.finite(prevalencias_idade$erro_padrao))
+) {
+  stop(
+    "Existem estimativas ou erros-padrão ausentes/não finitos."
+  )
+}
+
+
+#--- Projeções populacionais do IBGE ------------------------------------------
+
+# O arquivo oficial possui cinco linhas de título. A sexta linha contém os
+# nomes das variáveis: idade, sexo, código, sigla, local e anos de 2000 a 2070.
+projecoes_populacao <- read_excel(
+  path = arquivo_projecoes_populacao,
+  sheet = "1) POP_IDADE SIMPLES",
+  skip = 5
+) |>
+  clean_names()
+
+# Após clean_names(), as colunas anuais são nomeadas x2000, x2001, ..., x2070.
+colunas_anos <- names(projecoes_populacao)[
+  str_detect(names(projecoes_populacao), "^x?[0-9]{4}$")
+]
+
+if (length(colunas_anos) == 0) {
+  stop(
+    "As colunas anuais não foram encontradas no arquivo de projeções do IBGE."
+  )
+}
+
+populacao_idade_simples <- projecoes_populacao |>
+  filter(
+    sigla == "BR",
+    sexo %in% c("Ambos", "Homens", "Mulheres")
+  ) |>
+  select(
+    idade,
+    sexo,
+    all_of(colunas_anos)
+  ) |>
+  pivot_longer(
+    cols = all_of(colunas_anos),
+    names_to = "ano",
+    values_to = "populacao"
+  ) |>
+  mutate(
+    # clean_names() normalmente transforma 2000 em x2000. A extração dos
+    # quatro algarismos funciona tanto para x2000 quanto para 2000.
+    ano = as.integer(str_extract(ano, "[0-9]{4}")),
+    idade = as.integer(idade),
+    populacao = as.numeric(populacao),
+    
+    # A idade 90 reúne a população de 90 anos ou mais no arquivo oficial.
+    faixa_idade = case_when(
+      idade >= 20 & idade < 30 ~ "20-29",
+      idade >= 30 & idade < 40 ~ "30-39",
+      idade >= 40 & idade < 50 ~ "40-49",
+      idade >= 50 & idade < 60 ~ "50-59",
+      idade >= 60 & idade < 70 ~ "60-69",
+      idade >= 70 & idade < 80 ~ "70-79",
+      idade >= 80 ~ "80+",
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(
+    idade >= 20,
+    !is.na(faixa_idade),
+    is.finite(populacao),
+    populacao >= 0
+  )
+
+
+#--- População por sexo nos anos das pesquisas -------------------------------
+
+# Estas tabelas representam as estruturas efetivas de cada ano e permitem
+# calcular uma prevalência agregada que respeita o volume populacional estimado
+# de homens e mulheres em 2003, 2009, 2013 e 2019.
+populacao_anos_pesquisas <- populacao_idade_simples |>
+  filter(
+    ano %in% anos_analisados,
+    sexo %in% c("Homens", "Mulheres")
+  ) |>
+  mutate(
+    sexo = recode(
+      sexo,
+      Homens = "M",
+      Mulheres = "F"
+    )
+  ) |>
+  group_by(
+    ano,
+    sexo,
+    faixa_idade
+  ) |>
+  summarise(
+    populacao = sum(populacao),
+    .groups = "drop"
+  ) |>
+  group_by(
+    ano,
+    sexo
+  ) |>
+  mutate(
+    peso_etario_ano = populacao / sum(populacao)
+  ) |>
+  ungroup() |>
+  mutate(
+    faixa_idade = factor(
+      faixa_idade,
+      levels = faixas_idade,
+      ordered = TRUE
+    ),
+    fonte = paste(
+      "IBGE, Projeções da População, revisão 2024,",
+      "população por sexo e idade simples"
+    ),
+    url_fonte = url_projecoes_populacao
+  ) |>
+  arrange(
+    ano,
+    sexo,
+    faixa_idade
+  )
+
+if (
+  nrow(populacao_anos_pesquisas) !=
+  length(unique(prevalencias_idade$ano)) * 2 * length(faixas_idade)
+) {
+  stop(
+    "A projeção do IBGE não produziu todas as combinações esperadas de ",
+    "ano, sexo e faixa etária."
+  )
+}
+
+controle_pesos_anuais <- populacao_anos_pesquisas |>
+  group_by(
+    ano,
+    sexo
+  ) |>
+  summarise(
+    soma_pesos = sum(peso_etario_ano),
+    .groups = "drop"
+  )
+
+if (any(abs(controle_pesos_anuais$soma_pesos - 1) > 1e-10)) {
+  stop("Há pesos populacionais anuais que não somam 1.")
+}
+
+
+#--- Estrutura etária comum de 2019 -------------------------------------------
+
+# Para a padronização histórica, utilizamos a população brasileira de ambos os
+# sexos em 2019 como padrão único. O mesmo vetor de pesos é aplicado a homens e
+# mulheres em todas as pesquisas. Assim, diferenças temporais ou entre os sexos
+# não são produzidas por estruturas-padrão distintas.
+pesos_etarios_2019 <- populacao_idade_simples |>
+  filter(
+    ano == 2019,
+    sexo == "Ambos"
+  ) |>
+  group_by(faixa_idade) |>
+  summarise(
+    populacao_padrao = sum(populacao),
+    .groups = "drop"
+  ) |>
+  mutate(
+    peso_etario_2019 = populacao_padrao / sum(populacao_padrao),
+    faixa_idade = factor(
+      faixa_idade,
+      levels = faixas_idade,
+      ordered = TRUE
+    ),
+    fonte = paste(
+      "IBGE, Projeções da População, revisão 2024,",
+      "população por sexo e idade simples"
+    ),
+    url_fonte = url_projecoes_populacao
+  ) |>
+  arrange(faixa_idade)
+
+if (nrow(pesos_etarios_2019) != length(faixas_idade)) {
+  stop(
+    "Não foi possível construir os sete grupos etários da população de 2019."
+  )
+}
+
+if (abs(sum(pesos_etarios_2019$peso_etario_2019) - 1) > 1e-10) {
+  stop("Os pesos etários da população de 2019 não somam 1.")
+}
+
+print(populacao_anos_pesquisas, n = Inf)
+print(pesos_etarios_2019, n = Inf)
+
+
+#--- Agregação com a estrutura populacional de cada ano -----------------------
+
+# Este primeiro resultado responde à pergunta descritiva de cada pesquisa:
+# qual é a prevalência agregada quando cada faixa recebe o peso correspondente
+# à população masculina ou feminina estimada no respectivo ano?
+contribuicoes_estrutura_ano <- prevalencias_idade |>
+  mutate(
+    faixa_idade = factor(
+      faixa_idade,
+      levels = faixas_idade,
+      ordered = TRUE
+    )
+  ) |>
+  left_join(
+    populacao_anos_pesquisas,
+    by = c(
+      "ano",
+      "sexo",
+      "faixa_idade"
+    )
+  ) |>
+  mutate(
+    contribuicao_estimativa = peso_etario_ano * estimativa,
+    contribuicao_variancia = (peso_etario_ano * erro_padrao)^2
+  )
+
+if (any(is.na(contribuicoes_estrutura_ano$peso_etario_ano))) {
+  stop(
+    "Há resultados por idade sem correspondência na população projetada ",
+    "para o respectivo ano e sexo."
+  )
+}
+
+# O CSV de prevalências não contém as covariâncias entre os domínios etários.
+# Por esse motivo, o erro-padrão agregado é aproximado e trata os domínios como
+# independentes. A estimativa pontual ponderada não depende dessa aproximação.
+prevalencias_agregadas_estrutura_ano <- contribuicoes_estrutura_ano |>
+  group_by(
+    pesquisa,
+    ano,
+    sexo,
+    indicador
+  ) |>
+  summarise(
+    estimativa = sum(contribuicao_estimativa),
+    variancia_aproximada = sum(contribuicao_variancia),
+    erro_padrao = sqrt(variancia_aproximada),
+    .groups = "drop"
+  ) |>
+  mutate(
+    estimativa_logit = pmin(
+      pmax(estimativa, 1e-8),
+      1 - 1e-8
+    ),
+    erro_padrao_logit = erro_padrao /
+      (estimativa_logit * (1 - estimativa_logit)),
+    ic_inferior = plogis(
+      qlogis(estimativa_logit) -
+        qnorm(0.975) * erro_padrao_logit
+    ),
+    ic_superior = plogis(
+      qlogis(estimativa_logit) +
+        qnorm(0.975) * erro_padrao_logit
+    ),
+    coeficiente_variacao_pct = if_else(
+      estimativa > 0,
+      100 * erro_padrao / estimativa,
+      NA_real_
+    ),
+    estimativa_pct = 100 * estimativa,
+    ic_inferior_pct = 100 * ic_inferior,
+    ic_superior_pct = 100 * ic_superior,
+    sexo_rotulo = recode(
+      sexo,
+      M = "Homens",
+      F = "Mulheres"
+    ),
+    ponderacao = paste(
+      "Estrutura populacional projetada para o ano",
+      "e o sexo da pesquisa"
+    )
+  ) |>
+  select(
+    pesquisa,
+    ano,
+    sexo,
+    sexo_rotulo,
+    indicador,
+    ponderacao,
+    estimativa,
+    erro_padrao,
+    coeficiente_variacao_pct,
+    ic_inferior,
+    ic_superior,
+    estimativa_pct,
+    ic_inferior_pct,
+    ic_superior_pct
+  ) |>
+  arrange(
+    indicador,
+    sexo,
+    ano
+  )
+
+print(prevalencias_agregadas_estrutura_ano, n = Inf)
+
+
+#--- Padronização direta -------------------------------------------------------
+
+# Em cada pesquisa, sexo e indicador:
+#
+# prevalência padronizada = soma(peso etário de 2019 x prevalência da faixa)
+#
+# A tabela de contribuições preserva todos os componentes do cálculo para que
+# o resultado possa ser auditado linha por linha.
+contribuicoes_padronizacao <- prevalencias_idade |>
+  mutate(
+    faixa_idade = factor(
+      faixa_idade,
+      levels = faixas_idade,
+      ordered = TRUE
+    )
+  ) |>
+  left_join(
+    pesos_etarios_2019,
+    by = "faixa_idade"
+  ) |>
+  mutate(
+    contribuicao_estimativa = peso_etario_2019 * estimativa,
+    contribuicao_variancia = (peso_etario_2019 * erro_padrao)^2
+  )
+
+if (any(is.na(contribuicoes_padronizacao$peso_etario_2019))) {
+  stop(
+    "Há grupos etários das prevalências sem correspondência nos pesos de 2019."
+  )
+}
+
+# Como o CSV contém os erros-padrão de cada domínio, mas não a matriz de
+# covariância entre as faixas etárias, a variância abaixo é uma aproximação que
+# trata as estimativas etárias como independentes. A estimativa pontual, por sua
+# vez, é a média padronizada exata dos resultados presentes no CSV.
+prevalencias_padronizadas <- contribuicoes_padronizacao |>
+  group_by(
+    pesquisa,
+    ano,
+    sexo,
+    indicador
+  ) |>
+  summarise(
+    estimativa = sum(contribuicao_estimativa),
+    variancia_aproximada = sum(contribuicao_variancia),
+    erro_padrao = sqrt(variancia_aproximada),
+    .groups = "drop"
+  ) |>
+  mutate(
+    # Intervalo logit de 95%, coerente com o método empregado nas prevalências
+    # específicas e necessariamente contido entre zero e um.
+    estimativa_logit = pmin(
+      pmax(estimativa, 1e-8),
+      1 - 1e-8
+    ),
+    erro_padrao_logit = erro_padrao /
+      (estimativa_logit * (1 - estimativa_logit)),
+    ic_inferior = plogis(
+      qlogis(estimativa_logit) -
+        qnorm(0.975) * erro_padrao_logit
+    ),
+    ic_superior = plogis(
+      qlogis(estimativa_logit) +
+        qnorm(0.975) * erro_padrao_logit
+    ),
+    coeficiente_variacao_pct = if_else(
+      estimativa > 0,
+      100 * erro_padrao / estimativa,
+      NA_real_
+    ),
+    estimativa_pct = 100 * estimativa,
+    ic_inferior_pct = 100 * ic_inferior,
+    ic_superior_pct = 100 * ic_superior,
+    sexo_rotulo = recode(
+      sexo,
+      M = "Homens",
+      F = "Mulheres"
+    ),
+    padronizacao = paste(
+      "Estrutura etária da população brasileira projetada para 2019,",
+      "ambos os sexos, IBGE, revisão 2024"
+    )
+  ) |>
+  select(
+    pesquisa,
+    ano,
+    sexo,
+    sexo_rotulo,
+    indicador,
+    padronizacao,
+    estimativa,
+    erro_padrao,
+    coeficiente_variacao_pct,
+    ic_inferior,
+    ic_superior,
+    estimativa_pct,
+    ic_inferior_pct,
+    ic_superior_pct
+  ) |>
+  arrange(
+    indicador,
+    sexo,
+    ano
+  )
+
+print(prevalencias_padronizadas, n = Inf)
+
+
+#--- Exportação das tabelas ----------------------------------------------------
+
+dir.create(
+  diretorio_tabelas,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+write_csv(
+  populacao_anos_pesquisas,
+  file.path(
+    diretorio_tabelas,
+    "populacao_projetada_sexo_faixa_anos_pesquisas.csv"
+  ),
+  na = ""
+)
+
+write_csv(
+  pesos_etarios_2019,
+  file.path(
+    diretorio_tabelas,
+    "pesos_etarios_populacao_2019.csv"
+  ),
+  na = ""
+)
+
+write_csv(
+  contribuicoes_estrutura_ano,
+  file.path(
+    diretorio_tabelas,
+    "contribuicoes_agregacao_estrutura_ano.csv"
+  ),
+  na = ""
+)
+
+write_csv(
+  prevalencias_agregadas_estrutura_ano,
+  file.path(
+    diretorio_tabelas,
+    "prevalencias_agregadas_estrutura_ano.csv"
+  ),
+  na = ""
+)
+
+write_csv(
+  contribuicoes_padronizacao,
+  file.path(
+    diretorio_tabelas,
+    "contribuicoes_padronizacao_etaria_2019.csv"
+  ),
+  na = ""
+)
+
+write_csv(
+  prevalencias_padronizadas,
+  file.path(
+    diretorio_tabelas,
+    "prevalencias_padronizadas_etaria_2019.csv"
+  ),
+  na = ""
+)
+
+
+#--- Configuração visual -------------------------------------------------------
+
+cores_pesquisas <- c(
+  "POF 2002-2003" = "#264653",
+  "POF 2008-2009" = "#2A9D8F",
+  "PNS 2013" = "#E9A03B",
+  "PNS 2019" = "#B23A48"
+)
+
+cores_sexo <- c(
+  "Homens" = "#28587B",
+  "Mulheres" = "#A23B72"
+)
+
+tema_academico <- theme_minimal(base_size = 11) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 14,
+      color = "#222222"
+    ),
+    plot.subtitle = element_text(
+      size = 10.5,
+      color = "#4D4D4D",
+      margin = margin(b = 10)
+    ),
+    plot.caption = element_text(
+      size = 8.5,
+      color = "#555555",
+      hjust = 0,
+      margin = margin(t = 12)
+    ),
+    strip.text = element_text(
+      face = "bold",
+      color = "#222222"
+    ),
+    strip.background = element_rect(
+      fill = "#F2F2F2",
+      color = "#D9D9D9"
+    ),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(color = "#333333"),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold"),
+    plot.margin = margin(12, 15, 12, 12)
+  )
+
+
+#--- Gráfico 1: evolução das prevalências por faixa etária --------------------
+
+dados_grafico_idade <- prevalencias_idade |>
+  mutate(
+    pesquisa = factor(
+      pesquisa,
+      levels = pesquisas_analisadas,
+      ordered = TRUE
+    ),
+    faixa_idade = factor(
+      faixa_idade,
+      levels = faixas_idade,
+      ordered = TRUE
+    ),
+    indicador = factor(
+      indicador,
+      levels = c("Sobrepeso", "Obesidade"),
+      ordered = TRUE
+    ),
+    sexo_rotulo = recode(
+      sexo,
+      M = "Homens",
+      F = "Mulheres"
+    )
+  )
+
+grafico_prevalencia_idade <- ggplot(
+  dados_grafico_idade,
+  aes(
+    x = faixa_idade,
+    y = estimativa,
+    color = pesquisa,
+    group = pesquisa
+  )
+) +
+  geom_linerange(
+    aes(
+      ymin = ic_inferior,
+      ymax = ic_superior
+    ),
+    linewidth = 0.25,
+    alpha = 0.30
+  ) +
+  geom_line(linewidth = 0.75) +
+  geom_point(size = 1.8) +
+  facet_grid(
+    rows = vars(indicador),
+    cols = vars(sexo_rotulo)
+  ) +
+  scale_color_manual(values = cores_pesquisas) +
+  scale_y_continuous(
+    labels = scales::label_percent(
+      accuracy = 1,
+      decimal.mark = ","
+    ),
+    expand = expansion(mult = c(0.02, 0.08))
+  ) +
+  labs(
+    title = "Prevalência de sobrepeso e obesidade por idade e sexo",
+    subtitle = paste(
+      "Brasil, POF 2002-2003 e 2008-2009;",
+      "PNS 2013 e 2019 — intervalos de confiança de 95%"
+    ),
+    x = "Grupo etário",
+    y = "Prevalência estimada",
+    color = "Pesquisa",
+    caption = paste(
+      "Fonte: IBGE, Pesquisa de Orçamentos Familiares 2002-2003 e",
+      "2008-2009; Pesquisa Nacional de Saúde 2013 e 2019.",
+      "\nElaboração própria."
+    )
+  ) +
+  tema_academico
+
+print(grafico_prevalencia_idade)
+
+
+#--- Gráfico 2: evolução das prevalências padronizadas ------------------------
+
+dados_grafico_padronizado <- prevalencias_padronizadas |>
+  mutate(
+    pesquisa = factor(
+      pesquisa,
+      levels = pesquisas_analisadas,
+      ordered = TRUE
+    ),
+    indicador = factor(
+      indicador,
+      levels = c("Sobrepeso", "Obesidade"),
+      ordered = TRUE
+    )
+  )
+
+grafico_prevalencia_padronizada <- ggplot(
+  dados_grafico_padronizado,
+  aes(
+    x = pesquisa,
+    y = estimativa,
+    color = sexo_rotulo,
+    shape = sexo_rotulo,
+    group = sexo_rotulo
+  )
+) +
+  geom_errorbar(
+    aes(
+      ymin = ic_inferior,
+      ymax = ic_superior
+    ),
+    width = 0.08,
+    linewidth = 0.55,
+    position = position_dodge(width = 0.25)
+  ) +
+  geom_line(
+    linewidth = 0.75,
+    position = position_dodge(width = 0.25)
+  ) +
+  geom_point(
+    size = 2.8,
+    position = position_dodge(width = 0.25)
+  ) +
+  facet_wrap(
+    vars(indicador),
+    ncol = 2,
+    scales = "free_y"
+  ) +
+  scale_color_manual(values = cores_sexo) +
+  scale_shape_manual(
+    values = c(
+      "Homens" = 16,
+      "Mulheres" = 17
+    )
+  ) +
+  scale_y_continuous(
+    labels = scales::label_percent(
+      accuracy = 1,
+      decimal.mark = ","
+    ),
+    expand = expansion(mult = c(0.03, 0.10))
+  ) +
+  labs(
+    title = paste(
+      "Evolução da prevalência padronizada de",
+      "sobrepeso e obesidade"
+    ),
+    subtitle = paste(
+      "População de 20 anos ou mais; estrutura etária fixa da",
+      "população brasileira projetada para 2019"
+    ),
+    x = "Pesquisa",
+    y = "Prevalência padronizada",
+    color = "Sexo",
+    shape = "Sexo",
+    caption = paste(
+      "Fonte: IBGE, Pesquisa de Orçamentos Familiares 2002-2003 e",
+      "2008-2009; Pesquisa Nacional de Saúde 2013 e 2019;",
+      "Projeções da População, revisão 2024.",
+      "\nNota: padrão de 2019 formado pela população de ambos os sexos;",
+      "intervalos de 95% aproximados sem covariâncias entre domínios etários.",
+      "\nElaboração própria."
+    )
+  ) +
+  tema_academico +
+  theme(
+    axis.text.x = element_text(
+      angle = 25,
+      hjust = 1
+    )
+  )
+
+print(grafico_prevalencia_padronizada)
+
+
+#--- Exportação das figuras ----------------------------------------------------
+
+dir.create(
+  diretorio_figuras,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+# ggsave(
+#   filename = file.path(
+#     diretorio_figuras,
+#     "prevalencia_por_idade_sexo.png"
+#   ),
+#   plot = grafico_prevalencia_idade,
+#   width = 12,
+#   height = 8,
+#   units = "in",
+#   dpi = 320,
+#   bg = "white"
+# )
+
+ggsave(
+  filename = file.path(
+    diretorio_figuras,
+    "prevalencia_padronizada_estrutura_2019.png"
+  ),
+  plot = grafico_prevalencia_padronizada,
+  width = 11,
+  height = 6.5,
+  units = "in",
+  dpi = 320,
+  bg = "white"
+)
+
+message(
+  "Padronização concluída. Tabelas e figuras salvas em dados/output/."
+)

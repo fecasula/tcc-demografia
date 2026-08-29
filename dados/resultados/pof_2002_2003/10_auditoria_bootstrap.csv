@@ -1,0 +1,2 @@
+pesquisa,metodo,semente,replicas_solicitadas,menor_numero_replicas_validas,maior_numero_replicas_validas,numero_indicadores,rr_sorteado,mortalidade_sorteada,base_mortalidade_absoluta,base_mortalidade_pgev,unidade_obitos,comparacao_linearizacao,intervalo
+POF 2002-2003,Rao-Wu-Yue-Beaumont,20262003,1000,1000,1000,34,FALSE,FALSE,SIM 2003 - óbitos por ocorrência,Tábua de Vida do IBGE de 2003,Número absoluto de mortes,FALSE,"Percentis 2,5 e 97,5"

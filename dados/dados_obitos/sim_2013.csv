@@ -1,0 +1,25 @@
+ Mortalidade - Brasil
+Óbitos p/Ocorrênc por Faixa Etária e Sexo
+Período:2013
+"Faixa Etária";"Masc";"Fem";"Ign";"Total"
+"Menor 1 ano";21500;17242;224;38966
+"1 a 4 anos";3443;2892;2;6337
+"5 a 9 anos";2168;1555;-;3723
+"10 a 14 anos";3401;2024;-;5425
+"15 a 19 anos";17308;4134;-;21442
+"20 a 29 anos";44561;10537;7;55105
+"30 a 39 anos";46477;17909;9;64395
+"40 a 49 anos";61349;32186;8;93543
+"50 a 59 anos";94118;55149;15;149282
+"60 a 69 anos";116366;79375;19;195760
+"70 a 79 anos";131643;111405;25;243073
+"80 anos e mais";141237;188312;33;329582
+"Idade ignorada";3097;475;269;3841
+"Total";686668;523195;611;1210474
+ Fonte: MS/SVSA/CGIAE - Sistema de Informações sobre Mortalidade - SIM
+ Notas:
+ 
+ Dados finais disponíveis até 2024 e atualizados em 02/12/2025.
+ Dados de 2025 - 3a prévia - data extração 02/04/2026.
+ Dados de 2026 - 1a prévia - data extração 01/06/2026.
+ 

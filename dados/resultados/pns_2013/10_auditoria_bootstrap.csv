@@ -1,0 +1,2 @@
+pesquisa,metodo,semente,replicas_solicitadas,menor_numero_replicas_validas,maior_numero_replicas_validas,numero_indicadores,rr_sorteado,mortalidade_sorteada,base_mortalidade_absoluta,base_mortalidade_pgev,unidade_obitos,comparacao_linearizacao,intervalo
+PNS 2013,Rao-Wu-Yue-Beaumont,20262013,1000,1000,1000,34,FALSE,FALSE,SIM 2013 - óbitos por ocorrência,Tábua de Vida do IBGE de 2013,Número absoluto de mortes,FALSE,"Percentis 2,5 e 97,5"
