@@ -1,5 +1,5 @@
 #------------------------------------------------------------------------------- 
-# ESTIMAÇÃO PREVALÊNCIA DE SOBREPESO E OBESIDADE NO BRASIL (2002 - 2019)
+# ESTIMAÇÃO DAS PREVALÊNCIAS ANTROPOMÉTRICAS NO BRASIL (2002-2019)
 # TCC Ciências Sociais 
 # Felipe Casula, 2026
 #-------------------------------------------------------------------------------
@@ -146,9 +146,13 @@ criar_faixa_idade <- function(idade) {
   )
 }
 
-# Categorização binária para as prevalências estimadas:
-#   sobrepeso = 25,0 a <30,0 kg/m²
-#   obesidade = 30,0 kg/m² ou mais, sem separar seus graus
+# Três indicadores binários são estimados separadamente:
+#   sobrepeso       = 25,0 <= IMC < 30,0 kg/m²
+#   excesso de peso = IMC >= 25,0 kg/m²
+#   obesidade       = IMC >= 30,0 kg/m², sem separar seus graus
+#
+# Sobrepeso e obesidade são mutuamente exclusivos. Excesso de peso é o
+# indicador abrangente: reúne sobrepeso e todos os graus de obesidade.
 classificar_antropometria <- function(dados) {
   dados |>
     mutate(
@@ -163,7 +167,12 @@ classificar_antropometria <- function(dados) {
         is.finite(altura_cm) & altura_cm > 0 &
         is.finite(imc) & imc >= 15 & imc < 60,
       
-      sobrepeso = case_when(
+      excesso_peso = case_when(
+        antropometria_valida ~ as.integer(imc >= 25),
+        TRUE ~ NA_integer_
+      ),
+
+      sobrepeso_25a29 = case_when(
         antropometria_valida ~ as.integer(imc >= 25 & imc < 30),
         TRUE ~ NA_integer_
       ),
@@ -449,9 +458,9 @@ verificar_celulas(des_pns19, "PNS 2019")
 
 #--- Prevalências POF 2002-2003 -----------------------------------------------
 
-# 1. Sobrepeso por sexo e grupo etário
-prev_sobrepeso_idade_pof02 <- svyby(
-  formula = ~sobrepeso,
+# 1. Sobrepeso entre 25 e menos de 30 kg/m², por sexo e grupo etário
+prev_sobrepeso_25a29_idade_pof02 <- svyby(
+  formula = ~sobrepeso_25a29,
   by = ~sexo + faixa_idade,
   design = des_pof02,
   FUN = svyciprop,
@@ -464,7 +473,39 @@ prev_sobrepeso_idade_pof02 <- svyby(
 ) |>
   as_tibble()
 
-names(prev_sobrepeso_idade_pof02) <- c(
+names(prev_sobrepeso_25a29_idade_pof02) <- c(
+  "sexo", "faixa_idade", "estimativa", "erro_padrao",
+  "ic_inferior", "ic_superior"
+)
+
+prev_sobrepeso_25a29_idade_pof02 <- prev_sobrepeso_25a29_idade_pof02 |>
+  mutate(
+    pesquisa = "POF 2002-2003",
+    ano = 2003L,
+    indicador = "Sobrepeso (25–<30)",
+    estimativa_pct = 100 * estimativa,
+    ic_inferior_pct = 100 * ic_inferior,
+    ic_superior_pct = 100 * ic_superior,
+    .before = 1
+  )
+
+
+# 2. Excesso de peso por sexo e grupo etário
+prev_excesso_peso_idade_pof02 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo + faixa_idade,
+  design = des_pof02,
+  FUN = svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE,
+  drop.empty.groups = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_idade_pof02) <- c(
   "sexo",
   "faixa_idade",
   "estimativa",
@@ -473,11 +514,11 @@ names(prev_sobrepeso_idade_pof02) <- c(
   "ic_superior"
 )
 
-prev_sobrepeso_idade_pof02 <- prev_sobrepeso_idade_pof02 |>
+prev_excesso_peso_idade_pof02 <- prev_excesso_peso_idade_pof02 |>
   mutate(
     pesquisa = "POF 2002-2003",
     ano = 2003L,
-    indicador = "Sobrepeso",
+    indicador = "Excesso de peso (≥25)",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
     ic_superior_pct = 100 * ic_superior,
@@ -485,7 +526,7 @@ prev_sobrepeso_idade_pof02 <- prev_sobrepeso_idade_pof02 |>
   )
 
 
-# 2. Obesidade por sexo e grupo etário
+# 3. Obesidade por sexo e grupo etário
 prev_obesidade_idade_pof02 <- svyby(
   formula = ~obesidade,
   by = ~sexo + faixa_idade,
@@ -513,7 +554,7 @@ prev_obesidade_idade_pof02 <- prev_obesidade_idade_pof02 |>
   mutate(
     pesquisa = "POF 2002-2003",
     ano = 2003L,
-    indicador = "Obesidade",
+    indicador = "Obesidade (≥30)",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
     ic_superior_pct = 100 * ic_superior,
@@ -521,9 +562,10 @@ prev_obesidade_idade_pof02 <- prev_obesidade_idade_pof02 |>
   )
 
 
-# 3. Resultados específicos por sexo e idade
+# 4. Resultados específicos por sexo e idade
 prev_idade_pof02 <- bind_rows(
-  prev_sobrepeso_idade_pof02,
+  prev_sobrepeso_25a29_idade_pof02,
+  prev_excesso_peso_idade_pof02,
   prev_obesidade_idade_pof02
 ) |>
   arrange(indicador, sexo, faixa_idade)
@@ -531,9 +573,9 @@ prev_idade_pof02 <- bind_rows(
 print(prev_idade_pof02, n = Inf)
 
 
-# 4. Sobrepeso agregado por sexo
-prev_sobrepeso_sexo_pof02 <- svyby(
-  formula = ~sobrepeso,
+# 5. Sobrepeso entre 25 e menos de 30 kg/m², agregado por sexo
+prev_sobrepeso_25a29_sexo_pof02 <- svyby(
+  formula = ~sobrepeso_25a29,
   by = ~sexo,
   design = des_pof02,
   FUN = svyciprop,
@@ -545,19 +587,15 @@ prev_sobrepeso_sexo_pof02 <- svyby(
 ) |>
   as_tibble()
 
-names(prev_sobrepeso_sexo_pof02) <- c(
-  "sexo",
-  "estimativa",
-  "erro_padrao",
-  "ic_inferior",
-  "ic_superior"
+names(prev_sobrepeso_25a29_sexo_pof02) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
 )
 
-prev_sobrepeso_sexo_pof02 <- prev_sobrepeso_sexo_pof02 |>
+prev_sobrepeso_25a29_sexo_pof02 <- prev_sobrepeso_25a29_sexo_pof02 |>
   mutate(
     pesquisa = "POF 2002-2003",
     ano = 2003L,
-    indicador = "Sobrepeso",
+    indicador = "Sobrepeso (25–<30)",
     padronizacao = "Não padronizada",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
@@ -566,7 +604,42 @@ prev_sobrepeso_sexo_pof02 <- prev_sobrepeso_sexo_pof02 |>
   )
 
 
-# 5. Obesidade agregada por sexo
+# 6. Excesso de peso agregado por sexo
+prev_excesso_peso_sexo_pof02 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo,
+  design = des_pof02,
+  FUN = svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_sexo_pof02) <- c(
+  "sexo",
+  "estimativa",
+  "erro_padrao",
+  "ic_inferior",
+  "ic_superior"
+)
+
+prev_excesso_peso_sexo_pof02 <- prev_excesso_peso_sexo_pof02 |>
+  mutate(
+    pesquisa = "POF 2002-2003",
+    ano = 2003L,
+    indicador = "Excesso de peso (≥25)",
+    padronizacao = "Não padronizada",
+    estimativa_pct = 100 * estimativa,
+    ic_inferior_pct = 100 * ic_inferior,
+    ic_superior_pct = 100 * ic_superior,
+    .before = 1
+  )
+
+
+# 7. Obesidade agregada por sexo
 prev_obesidade_sexo_pof02 <- svyby(
   formula = ~obesidade,
   by = ~sexo,
@@ -592,7 +665,7 @@ prev_obesidade_sexo_pof02 <- prev_obesidade_sexo_pof02 |>
   mutate(
     pesquisa = "POF 2002-2003",
     ano = 2003L,
-    indicador = "Obesidade",
+    indicador = "Obesidade (≥30)",
     padronizacao = "Não padronizada",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
@@ -601,9 +674,10 @@ prev_obesidade_sexo_pof02 <- prev_obesidade_sexo_pof02 |>
   )
 
 
-# 6. Resultado agregado da POF 2002-2003
+# 8. Resultado agregado da POF 2002-2003
 prev_sexo_pof02 <- bind_rows(
-  prev_sobrepeso_sexo_pof02,
+  prev_sobrepeso_25a29_sexo_pof02,
+  prev_excesso_peso_sexo_pof02,
   prev_obesidade_sexo_pof02
 ) |>
   arrange(indicador, sexo)
@@ -613,9 +687,9 @@ print(prev_sexo_pof02, n = Inf)
 
 #--- Prevalências POF 2008-2009 -----------------------------------------------
 
-# 1. Sobrepeso por sexo e grupo etário
-prev_sobrepeso_idade_pof08 <- svyby(
-  formula = ~sobrepeso,
+# 1. Sobrepeso entre 25 e menos de 30 kg/m², por sexo e grupo etário
+prev_sobrepeso_25a29_idade_pof08 <- svyby(
+  formula = ~sobrepeso_25a29,
   by = ~sexo + faixa_idade,
   design = des_pof08,
   FUN = svyciprop,
@@ -628,7 +702,39 @@ prev_sobrepeso_idade_pof08 <- svyby(
 ) |>
   as_tibble()
 
-names(prev_sobrepeso_idade_pof08) <- c(
+names(prev_sobrepeso_25a29_idade_pof08) <- c(
+  "sexo", "faixa_idade", "estimativa", "erro_padrao",
+  "ic_inferior", "ic_superior"
+)
+
+prev_sobrepeso_25a29_idade_pof08 <- prev_sobrepeso_25a29_idade_pof08 |>
+  mutate(
+    pesquisa = "POF 2008-2009",
+    ano = 2009L,
+    indicador = "Sobrepeso (25–<30)",
+    estimativa_pct = 100 * estimativa,
+    ic_inferior_pct = 100 * ic_inferior,
+    ic_superior_pct = 100 * ic_superior,
+    .before = 1
+  )
+
+
+# 2. Excesso de peso por sexo e grupo etário
+prev_excesso_peso_idade_pof08 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo + faixa_idade,
+  design = des_pof08,
+  FUN = svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE,
+  drop.empty.groups = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_idade_pof08) <- c(
   "sexo",
   "faixa_idade",
   "estimativa",
@@ -637,11 +743,11 @@ names(prev_sobrepeso_idade_pof08) <- c(
   "ic_superior"
 )
 
-prev_sobrepeso_idade_pof08 <- prev_sobrepeso_idade_pof08 |>
+prev_excesso_peso_idade_pof08 <- prev_excesso_peso_idade_pof08 |>
   mutate(
     pesquisa = "POF 2008-2009",
     ano = 2009L,
-    indicador = "Sobrepeso",
+    indicador = "Excesso de peso (≥25)",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
     ic_superior_pct = 100 * ic_superior,
@@ -649,7 +755,7 @@ prev_sobrepeso_idade_pof08 <- prev_sobrepeso_idade_pof08 |>
   )
 
 
-# 2. Obesidade por sexo e grupo etário
+# 3. Obesidade por sexo e grupo etário
 prev_obesidade_idade_pof08 <- svyby(
   formula = ~obesidade,
   by = ~sexo + faixa_idade,
@@ -677,7 +783,7 @@ prev_obesidade_idade_pof08 <- prev_obesidade_idade_pof08 |>
   mutate(
     pesquisa = "POF 2008-2009",
     ano = 2009L,
-    indicador = "Obesidade",
+    indicador = "Obesidade (≥30)",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
     ic_superior_pct = 100 * ic_superior,
@@ -685,9 +791,10 @@ prev_obesidade_idade_pof08 <- prev_obesidade_idade_pof08 |>
   )
 
 
-# 3. Resultados específicos por sexo e idade
+# 4. Resultados específicos por sexo e idade
 prev_idade_pof08 <- bind_rows(
-  prev_sobrepeso_idade_pof08,
+  prev_sobrepeso_25a29_idade_pof08,
+  prev_excesso_peso_idade_pof08,
   prev_obesidade_idade_pof08
 ) |>
   arrange(indicador, sexo, faixa_idade)
@@ -695,9 +802,9 @@ prev_idade_pof08 <- bind_rows(
 #print(prev_idade_pof08, n = Inf)
 
 
-# 4. Sobrepeso agregado por sexo
-prev_sobrepeso_sexo_pof08 <- svyby(
-  formula = ~sobrepeso,
+# 5. Sobrepeso entre 25 e menos de 30 kg/m², agregado por sexo
+prev_sobrepeso_25a29_sexo_pof08 <- svyby(
+  formula = ~sobrepeso_25a29,
   by = ~sexo,
   design = des_pof08,
   FUN = svyciprop,
@@ -709,19 +816,15 @@ prev_sobrepeso_sexo_pof08 <- svyby(
 ) |>
   as_tibble()
 
-names(prev_sobrepeso_sexo_pof08) <- c(
-  "sexo",
-  "estimativa",
-  "erro_padrao",
-  "ic_inferior",
-  "ic_superior"
+names(prev_sobrepeso_25a29_sexo_pof08) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
 )
 
-prev_sobrepeso_sexo_pof08 <- prev_sobrepeso_sexo_pof08 |>
+prev_sobrepeso_25a29_sexo_pof08 <- prev_sobrepeso_25a29_sexo_pof08 |>
   mutate(
     pesquisa = "POF 2008-2009",
     ano = 2009L,
-    indicador = "Sobrepeso",
+    indicador = "Sobrepeso (25–<30)",
     padronizacao = "Não padronizada",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
@@ -730,7 +833,42 @@ prev_sobrepeso_sexo_pof08 <- prev_sobrepeso_sexo_pof08 |>
   )
 
 
-# 5. Obesidade agregada por sexo
+# 6. Excesso de peso agregado por sexo
+prev_excesso_peso_sexo_pof08 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo,
+  design = des_pof08,
+  FUN = svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_sexo_pof08) <- c(
+  "sexo",
+  "estimativa",
+  "erro_padrao",
+  "ic_inferior",
+  "ic_superior"
+)
+
+prev_excesso_peso_sexo_pof08 <- prev_excesso_peso_sexo_pof08 |>
+  mutate(
+    pesquisa = "POF 2008-2009",
+    ano = 2009L,
+    indicador = "Excesso de peso (≥25)",
+    padronizacao = "Não padronizada",
+    estimativa_pct = 100 * estimativa,
+    ic_inferior_pct = 100 * ic_inferior,
+    ic_superior_pct = 100 * ic_superior,
+    .before = 1
+  )
+
+
+# 7. Obesidade agregada por sexo
 prev_obesidade_sexo_pof08 <- svyby(
   formula = ~obesidade,
   by = ~sexo,
@@ -756,7 +894,7 @@ prev_obesidade_sexo_pof08 <- prev_obesidade_sexo_pof08 |>
   mutate(
     pesquisa = "POF 2008-2009",
     ano = 2009L,
-    indicador = "Obesidade",
+    indicador = "Obesidade (≥30)",
     padronizacao = "Não padronizada",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
@@ -765,9 +903,10 @@ prev_obesidade_sexo_pof08 <- prev_obesidade_sexo_pof08 |>
   )
 
 
-# 6. Resultado agregado da POF 2008-2009
+# 8. Resultado agregado da POF 2008-2009
 prev_sexo_pof08 <- bind_rows(
-  prev_sobrepeso_sexo_pof08,
+  prev_sobrepeso_25a29_sexo_pof08,
+  prev_excesso_peso_sexo_pof08,
   prev_obesidade_sexo_pof08
 ) |>
   arrange(indicador, sexo)
@@ -776,9 +915,9 @@ prev_sexo_pof08 <- bind_rows(
 
 #--- Prevalências PNS 2013 ----------------------------------------------------
 
-# 1. Sobrepeso por sexo e grupo etário
-prev_sobrepeso_idade_pns13 <- svyby(
-  formula = ~sobrepeso,
+# 1. Sobrepeso entre 25 e menos de 30 kg/m², por sexo e grupo etário
+prev_sobrepeso_25a29_idade_pns13 <- svyby(
+  formula = ~sobrepeso_25a29,
   by = ~sexo + faixa_idade,
   design = des_pns13,
   FUN = svyciprop,
@@ -791,7 +930,39 @@ prev_sobrepeso_idade_pns13 <- svyby(
 ) |>
   as_tibble()
 
-names(prev_sobrepeso_idade_pns13) <- c(
+names(prev_sobrepeso_25a29_idade_pns13) <- c(
+  "sexo", "faixa_idade", "estimativa", "erro_padrao",
+  "ic_inferior", "ic_superior"
+)
+
+prev_sobrepeso_25a29_idade_pns13 <- prev_sobrepeso_25a29_idade_pns13 |>
+  mutate(
+    pesquisa = "PNS 2013",
+    ano = 2013L,
+    indicador = "Sobrepeso (25–<30)",
+    estimativa_pct = 100 * estimativa,
+    ic_inferior_pct = 100 * ic_inferior,
+    ic_superior_pct = 100 * ic_superior,
+    .before = 1
+  )
+
+
+# 2. Excesso de peso por sexo e grupo etário
+prev_excesso_peso_idade_pns13 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo + faixa_idade,
+  design = des_pns13,
+  FUN = svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE,
+  drop.empty.groups = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_idade_pns13) <- c(
   "sexo",
   "faixa_idade",
   "estimativa",
@@ -800,11 +971,11 @@ names(prev_sobrepeso_idade_pns13) <- c(
   "ic_superior"
 )
 
-prev_sobrepeso_idade_pns13 <- prev_sobrepeso_idade_pns13 |>
+prev_excesso_peso_idade_pns13 <- prev_excesso_peso_idade_pns13 |>
   mutate(
     pesquisa = "PNS 2013",
     ano = 2013L,
-    indicador = "Sobrepeso",
+    indicador = "Excesso de peso (≥25)",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
     ic_superior_pct = 100 * ic_superior,
@@ -812,7 +983,7 @@ prev_sobrepeso_idade_pns13 <- prev_sobrepeso_idade_pns13 |>
   )
 
 
-# 2. Obesidade por sexo e grupo etário
+# 3. Obesidade por sexo e grupo etário
 prev_obesidade_idade_pns13 <- svyby(
   formula = ~obesidade,
   by = ~sexo + faixa_idade,
@@ -840,7 +1011,7 @@ prev_obesidade_idade_pns13 <- prev_obesidade_idade_pns13 |>
   mutate(
     pesquisa = "PNS 2013",
     ano = 2013L,
-    indicador = "Obesidade",
+    indicador = "Obesidade (≥30)",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
     ic_superior_pct = 100 * ic_superior,
@@ -848,9 +1019,10 @@ prev_obesidade_idade_pns13 <- prev_obesidade_idade_pns13 |>
   )
 
 
-# 3. Reunir os resultados específicos por idade
+# 4. Reunir os resultados específicos por idade
 prev_idade_pns13 <- bind_rows(
-  prev_sobrepeso_idade_pns13,
+  prev_sobrepeso_25a29_idade_pns13,
+  prev_excesso_peso_idade_pns13,
   prev_obesidade_idade_pns13
 ) |>
   arrange(indicador, sexo, faixa_idade)
@@ -858,9 +1030,9 @@ prev_idade_pns13 <- bind_rows(
 print(prev_idade_pns13, n = Inf)
 
 
-# 4. Sobrepeso agregado por sexo, sem padronização etária
-prev_sobrepeso_sexo_pns13 <- svyby(
-  formula = ~sobrepeso,
+# 5. Sobrepeso entre 25 e menos de 30 kg/m², agregado por sexo
+prev_sobrepeso_25a29_sexo_pns13 <- svyby(
+  formula = ~sobrepeso_25a29,
   by = ~sexo,
   design = des_pns13,
   FUN = svyciprop,
@@ -872,19 +1044,15 @@ prev_sobrepeso_sexo_pns13 <- svyby(
 ) |>
   as_tibble()
 
-names(prev_sobrepeso_sexo_pns13) <- c(
-  "sexo",
-  "estimativa",
-  "erro_padrao",
-  "ic_inferior",
-  "ic_superior"
+names(prev_sobrepeso_25a29_sexo_pns13) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
 )
 
-prev_sobrepeso_sexo_pns13 <- prev_sobrepeso_sexo_pns13 |>
+prev_sobrepeso_25a29_sexo_pns13 <- prev_sobrepeso_25a29_sexo_pns13 |>
   mutate(
     pesquisa = "PNS 2013",
     ano = 2013L,
-    indicador = "Sobrepeso",
+    indicador = "Sobrepeso (25–<30)",
     padronizacao = "Não padronizada",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
@@ -893,7 +1061,42 @@ prev_sobrepeso_sexo_pns13 <- prev_sobrepeso_sexo_pns13 |>
   )
 
 
-# 5. Obesidade agregada por sexo, sem padronização etária
+# 6. Excesso de peso agregado por sexo, sem padronização etária
+prev_excesso_peso_sexo_pns13 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo,
+  design = des_pns13,
+  FUN = svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_sexo_pns13) <- c(
+  "sexo",
+  "estimativa",
+  "erro_padrao",
+  "ic_inferior",
+  "ic_superior"
+)
+
+prev_excesso_peso_sexo_pns13 <- prev_excesso_peso_sexo_pns13 |>
+  mutate(
+    pesquisa = "PNS 2013",
+    ano = 2013L,
+    indicador = "Excesso de peso (≥25)",
+    padronizacao = "Não padronizada",
+    estimativa_pct = 100 * estimativa,
+    ic_inferior_pct = 100 * ic_inferior,
+    ic_superior_pct = 100 * ic_superior,
+    .before = 1
+  )
+
+
+# 7. Obesidade agregada por sexo, sem padronização etária
 prev_obesidade_sexo_pns13 <- svyby(
   formula = ~obesidade,
   by = ~sexo,
@@ -919,7 +1122,7 @@ prev_obesidade_sexo_pns13 <- prev_obesidade_sexo_pns13 |>
   mutate(
     pesquisa = "PNS 2013",
     ano = 2013L,
-    indicador = "Obesidade",
+    indicador = "Obesidade (≥30)",
     padronizacao = "Não padronizada",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
@@ -928,9 +1131,10 @@ prev_obesidade_sexo_pns13 <- prev_obesidade_sexo_pns13 |>
   )
 
 
-# 6. Resultado agregado da PNS 2013
+# 8. Resultado agregado da PNS 2013
 prev_sexo_pns13 <- bind_rows(
-  prev_sobrepeso_sexo_pns13,
+  prev_sobrepeso_25a29_sexo_pns13,
+  prev_excesso_peso_sexo_pns13,
   prev_obesidade_sexo_pns13
 ) |>
   arrange(indicador, sexo)
@@ -940,9 +1144,9 @@ print(prev_sexo_pns13, n = Inf)
 
 #--- Prevalências PNS 2019 ----------------------------------------------------
 
-# 1. Sobrepeso por sexo e grupo etário
-prev_sobrepeso_idade_pns19 <- svyby(
-  formula = ~sobrepeso,
+# 1. Sobrepeso entre 25 e menos de 30 kg/m², por sexo e grupo etário
+prev_sobrepeso_25a29_idade_pns19 <- svyby(
+  formula = ~sobrepeso_25a29,
   by = ~sexo + faixa_idade,
   design = des_pns19,
   FUN = svyciprop,
@@ -955,7 +1159,39 @@ prev_sobrepeso_idade_pns19 <- svyby(
 ) |>
   as_tibble()
 
-names(prev_sobrepeso_idade_pns19) <- c(
+names(prev_sobrepeso_25a29_idade_pns19) <- c(
+  "sexo", "faixa_idade", "estimativa", "erro_padrao",
+  "ic_inferior", "ic_superior"
+)
+
+prev_sobrepeso_25a29_idade_pns19 <- prev_sobrepeso_25a29_idade_pns19 |>
+  mutate(
+    pesquisa = "PNS 2019",
+    ano = 2019L,
+    indicador = "Sobrepeso (25–<30)",
+    estimativa_pct = 100 * estimativa,
+    ic_inferior_pct = 100 * ic_inferior,
+    ic_superior_pct = 100 * ic_superior,
+    .before = 1
+  )
+
+
+# 2. Excesso de peso por sexo e grupo etário
+prev_excesso_peso_idade_pns19 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo + faixa_idade,
+  design = des_pns19,
+  FUN = svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE,
+  drop.empty.groups = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_idade_pns19) <- c(
   "sexo",
   "faixa_idade",
   "estimativa",
@@ -964,11 +1200,11 @@ names(prev_sobrepeso_idade_pns19) <- c(
   "ic_superior"
 )
 
-prev_sobrepeso_idade_pns19 <- prev_sobrepeso_idade_pns19 |>
+prev_excesso_peso_idade_pns19 <- prev_excesso_peso_idade_pns19 |>
   mutate(
     pesquisa = "PNS 2019",
     ano = 2019L,
-    indicador = "Sobrepeso",
+    indicador = "Excesso de peso (≥25)",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
     ic_superior_pct = 100 * ic_superior,
@@ -976,7 +1212,7 @@ prev_sobrepeso_idade_pns19 <- prev_sobrepeso_idade_pns19 |>
   )
 
 
-# 2. Obesidade por sexo e grupo etário
+# 3. Obesidade por sexo e grupo etário
 prev_obesidade_idade_pns19 <- svyby(
   formula = ~obesidade,
   by = ~sexo + faixa_idade,
@@ -1004,7 +1240,7 @@ prev_obesidade_idade_pns19 <- prev_obesidade_idade_pns19 |>
   mutate(
     pesquisa = "PNS 2019",
     ano = 2019L,
-    indicador = "Obesidade",
+    indicador = "Obesidade (≥30)",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
     ic_superior_pct = 100 * ic_superior,
@@ -1012,9 +1248,10 @@ prev_obesidade_idade_pns19 <- prev_obesidade_idade_pns19 |>
   )
 
 
-# 3. Reunir os resultados específicos por idade
+# 4. Reunir os resultados específicos por idade
 prev_idade_pns19 <- bind_rows(
-  prev_sobrepeso_idade_pns19,
+  prev_sobrepeso_25a29_idade_pns19,
+  prev_excesso_peso_idade_pns19,
   prev_obesidade_idade_pns19
 ) |>
   arrange(indicador, sexo, faixa_idade)
@@ -1022,9 +1259,9 @@ prev_idade_pns19 <- bind_rows(
 print(prev_idade_pns19, n = Inf)
 
 
-# 4. Sobrepeso agregado por sexo, sem padronização etária
-prev_sobrepeso_sexo_pns19 <- svyby(
-  formula = ~sobrepeso,
+# 5. Sobrepeso entre 25 e menos de 30 kg/m², agregado por sexo
+prev_sobrepeso_25a29_sexo_pns19 <- svyby(
+  formula = ~sobrepeso_25a29,
   by = ~sexo,
   design = des_pns19,
   FUN = svyciprop,
@@ -1036,19 +1273,15 @@ prev_sobrepeso_sexo_pns19 <- svyby(
 ) |>
   as_tibble()
 
-names(prev_sobrepeso_sexo_pns19) <- c(
-  "sexo",
-  "estimativa",
-  "erro_padrao",
-  "ic_inferior",
-  "ic_superior"
+names(prev_sobrepeso_25a29_sexo_pns19) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
 )
 
-prev_sobrepeso_sexo_pns19 <- prev_sobrepeso_sexo_pns19 |>
+prev_sobrepeso_25a29_sexo_pns19 <- prev_sobrepeso_25a29_sexo_pns19 |>
   mutate(
     pesquisa = "PNS 2019",
     ano = 2019L,
-    indicador = "Sobrepeso",
+    indicador = "Sobrepeso (25–<30)",
     padronizacao = "Não padronizada",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
@@ -1057,7 +1290,42 @@ prev_sobrepeso_sexo_pns19 <- prev_sobrepeso_sexo_pns19 |>
   )
 
 
-# 5. Obesidade agregada por sexo, sem padronização etária
+# 6. Excesso de peso agregado por sexo, sem padronização etária
+prev_excesso_peso_sexo_pns19 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo,
+  design = des_pns19,
+  FUN = svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_sexo_pns19) <- c(
+  "sexo",
+  "estimativa",
+  "erro_padrao",
+  "ic_inferior",
+  "ic_superior"
+)
+
+prev_excesso_peso_sexo_pns19 <- prev_excesso_peso_sexo_pns19 |>
+  mutate(
+    pesquisa = "PNS 2019",
+    ano = 2019L,
+    indicador = "Excesso de peso (≥25)",
+    padronizacao = "Não padronizada",
+    estimativa_pct = 100 * estimativa,
+    ic_inferior_pct = 100 * ic_inferior,
+    ic_superior_pct = 100 * ic_superior,
+    .before = 1
+  )
+
+
+# 7. Obesidade agregada por sexo, sem padronização etária
 prev_obesidade_sexo_pns19 <- svyby(
   formula = ~obesidade,
   by = ~sexo,
@@ -1083,7 +1351,7 @@ prev_obesidade_sexo_pns19 <- prev_obesidade_sexo_pns19 |>
   mutate(
     pesquisa = "PNS 2019",
     ano = 2019L,
-    indicador = "Obesidade",
+    indicador = "Obesidade (≥30)",
     padronizacao = "Não padronizada",
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
@@ -1091,9 +1359,10 @@ prev_obesidade_sexo_pns19 <- prev_obesidade_sexo_pns19 |>
     .before = 1
   )
 
-# 6. Resultado agregado da PNS 2019
+# 8. Resultado agregado da PNS 2019
 prev_sexo_pns19 <- bind_rows(
-  prev_sobrepeso_sexo_pns19,
+  prev_sobrepeso_25a29_sexo_pns19,
+  prev_excesso_peso_sexo_pns19,
   prev_obesidade_sexo_pns19
 ) |>
   arrange(indicador, sexo)
@@ -1160,7 +1429,11 @@ df_prevalencias <- bind_rows(
     
     indicador = factor(
       indicador,
-      levels = c("Sobrepeso", "Obesidade"),
+      levels = c(
+        "Sobrepeso (25–<30)",
+        "Excesso de peso (≥25)",
+        "Obesidade (≥30)"
+      ),
       ordered = TRUE
     ),
     
@@ -1322,7 +1595,7 @@ grafico_prevalencia_idade <- ggplot(
     expand = expansion(mult = c(0.02, 0.08))
   ) +
   labs(
-    title = "Prevalência de sobrepeso e obesidade por idade e sexo",
+    title = "Prevalências antropométricas por idade e sexo",
     subtitle = paste(
       "Brasil, POF 2002-2003 e 2008-2009;",
       "PNS 2013 e 2019 — intervalos de confiança de 95%"
@@ -1333,6 +1606,8 @@ grafico_prevalencia_idade <- ggplot(
     caption = paste(
       "Fonte: IBGE, Pesquisa de Orçamentos Familiares 2002-2003 e",
       "2008-2009; Pesquisa Nacional de Saúde 2013 e 2019.",
+      "\nNota: sobrepeso = 25 ≤ IMC < 30 kg/m²; excesso de peso = IMC ≥ 25 kg/m²",
+      "e inclui as pessoas com obesidade; obesidade = IMC ≥ 30 kg/m².",
       "\nElaboração própria."
     )
   ) +
@@ -1380,7 +1655,7 @@ grafico_prevalencia_sexo <- ggplot(
   ) +
   facet_wrap(
     vars(indicador),
-    ncol = 2,
+    ncol = 3,
     scales = "free_y"
   ) +
   scale_color_manual(
@@ -1400,7 +1675,7 @@ grafico_prevalencia_sexo <- ggplot(
     expand = expansion(mult = c(0.03, 0.10))
   ) +
   labs(
-    title = "Evolução da prevalência de sobrepeso e obesidade",
+    title = "Evolução das prevalências antropométricas",
     subtitle = paste(
       "Estimativas agregadas por sexo, população de 20 anos ou mais;",
       "intervalos de confiança de 95%"
@@ -1412,7 +1687,9 @@ grafico_prevalencia_sexo <- ggplot(
     caption = paste(
       "Fonte: IBGE, Pesquisa de Orçamentos Familiares 2002-2003 e",
       "2008-2009; Pesquisa Nacional de Saúde 2013 e 2019.",
-      "\nNota: estimativas ainda não padronizadas por idade.",
+      "\nNota: sobrepeso = 25 ≤ IMC < 30 kg/m²; excesso de peso = IMC ≥ 25 kg/m²",
+      "e inclui as pessoas com obesidade; obesidade = IMC ≥ 30 kg/m².",
+      "Estimativas ainda não padronizadas por idade.",
       "\nElaboração própria."
     )
   ) +
@@ -1438,7 +1715,7 @@ ggsave(
   filename = "output/graficos_prevalencia/prevalencia_por_idade_sexo.png",
   plot = grafico_prevalencia_idade,
   width = 12,
-  height = 8,
+  height = 10,
   units = "in",
   dpi = 320,
   bg = "white"
@@ -1447,10 +1724,9 @@ ggsave(
 ggsave(
   filename = "output/graficos_prevalencia/prevalencia_agregada_por_sexo.png",
   plot = grafico_prevalencia_sexo,
-  width = 11,
+  width = 14,
   height = 6.5,
   units = "in",
   dpi = 320,
   bg = "white"
 )
-

@@ -195,8 +195,8 @@ pof2002 <- pof2002_bruta |>
     ),
 
     # As seis categorias são usadas somente nos indicadores de impacto.
-    # As prevalências descritivas de sobrepeso e obesidade continuam binárias
-    # no script próprio de prevalências.
+    # As prevalências descritivas de excesso de peso (IMC >= 25) e obesidade
+    # (IMC >= 30) são estimadas como indicadores binários no script próprio.
     categoria_imc = case_when(
       antropometria_valida & imc < 18.5 ~ "baixo",
       antropometria_valida & imc < 25.0 ~ "normal",

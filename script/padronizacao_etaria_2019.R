@@ -1,10 +1,48 @@
 #-------------------------------------------------------------------------------
-# PADRONIZAÇÃO ETÁRIA DAS PREVALÊNCIAS DE SOBREPESO E OBESIDADE
+# PADRONIZAÇÃO ETÁRIA DAS PREVALÊNCIAS ANTROPOMÉTRICAS
 # Projeções da População do IBGE, revisão 2024
 # TCC Ciências Sociais
 # Felipe Casula, 2026
 #-------------------------------------------------------------------------------
-rm(list = ls(all = TRUE))
+
+# A padronização será calculada dentro dos objetos survey, e não a partir dos
+# erros-padrão já exportados para CSV. Por isso, este script precisa dos quatro
+# desenhos declarados em estimacao_prevalencia.R.
+objetos_survey_necessarios <- c(
+  "des_pof02",
+  "des_pof08",
+  "des_pns13",
+  "des_pns19"
+)
+
+objetos_survey_disponiveis <- vapply(
+  objetos_survey_necessarios,
+  function(nome_objeto) {
+    if (!exists(nome_objeto, inherits = TRUE)) {
+      return(FALSE)
+    }
+
+    desenho <- get(nome_objeto, inherits = TRUE)
+
+    all(
+      c(
+        "sexo", "faixa_idade", "sobrepeso_25a29",
+        "excesso_peso", "obesidade"
+      ) %in%
+        names(desenho$variables)
+    )
+  },
+  logical(1)
+)
+
+if (!all(objetos_survey_disponiveis)) {
+  message(
+    "Os objetos survey ainda não estão na sessão. Executando primeiro ",
+    "script/estimacao_prevalencia.R..."
+  )
+
+  source("script/estimacao_prevalencia.R")
+}
 
 #--- Bibliotecas ---------------------------------------------------------------
 
@@ -13,10 +51,31 @@ if (!requireNamespace("pacman", quietly = TRUE)) {
 }
 
 pacman::p_load(
+  survey,
   tidyverse,
   janitor,
   readxl
 )
+
+if (!all(vapply(
+  c("des_pof02", "des_pof08", "des_pns13", "des_pns19"),
+  function(nome_objeto) {
+    exists(nome_objeto, inherits = TRUE) &&
+      all(
+        c(
+          "sexo", "faixa_idade", "sobrepeso_25a29",
+          "excesso_peso", "obesidade"
+        ) %in%
+          names(get(nome_objeto, inherits = TRUE)$variables)
+      )
+  },
+  logical(1)
+))) {
+  stop(
+    "Não foi possível criar os quatro objetos survey necessários à ",
+    "padronização. Revise a execução de estimacao_prevalencia.R."
+  )
+}
 
 #--- Arquivos utilizados -------------------------------------------------------
 
@@ -102,6 +161,12 @@ faixas_idade <- c(
   "80+"
 )
 
+indicadores_analisados <- c(
+  "Sobrepeso (25–<30)",
+  "Excesso de peso (≥25)",
+  "Obesidade (≥30)"
+)
+
 
 #--- Resultados estimados por grupo etário ------------------------------------
 
@@ -154,6 +219,15 @@ if (!setequal(unique(prevalencias_idade$ano), anos_analisados)) {
   stop(
     "Os anos do arquivo de prevalências não correspondem a 2003, 2009, ",
     "2013 e 2019."
+  )
+}
+
+if (!setequal(unique(prevalencias_idade$indicador), indicadores_analisados)) {
+  stop(
+    "O arquivo de prevalências não contém simultaneamente as três ",
+    "classificações esperadas: ",
+    paste(indicadores_analisados, collapse = ", "),
+    ". Execute novamente estimacao_prevalencia.R."
   )
 }
 
@@ -495,68 +569,384 @@ print(prevalencias_agregadas_estrutura_ano, n = Inf)
 
 #--- Padronização direta -------------------------------------------------------
 
-# Em cada pesquisa, sexo e indicador:
-#
-# prevalência padronizada = soma(peso etário de 2019 x prevalência da faixa)
-#
-# A tabela de contribuições preserva todos os componentes do cálculo para que
-# o resultado possa ser auditado linha por linha.
-contribuicoes_padronizacao <- prevalencias_idade |>
-  mutate(
-    faixa_idade = factor(
-      faixa_idade,
-      levels = faixas_idade,
-      ordered = TRUE
-    )
-  ) |>
-  left_join(
-    pesos_etarios_2019,
-    by = "faixa_idade"
-  ) |>
-  mutate(
-    contribuicao_estimativa = peso_etario_2019 * estimativa,
-    contribuicao_variancia = (peso_etario_2019 * erro_padrao)^2
-  )
+# survey::svystandardize() faz a padronização dentro dos domínios de sexo.
+# A função modifica os pesos do desenho para que homens e mulheres tenham a
+# mesma distribuição etária de 2019, mantendo os totais estimados de cada
+# domínio. Desse modo, a variância é calculada por linearização no próprio
+# desenho complexo e preserva as covariâncias induzidas por estratos e UPA.
 
-if (any(is.na(contribuicoes_padronizacao$peso_etario_2019))) {
-  stop(
-    "Há grupos etários das prevalências sem correspondência nos pesos de 2019."
-  )
+populacao_padrao_2019 <- pesos_etarios_2019 |>
+  arrange(faixa_idade) |>
+  pull(peso_etario_2019)
+
+names(populacao_padrao_2019) <- faixas_idade
+
+if (
+  length(populacao_padrao_2019) != length(faixas_idade) ||
+  any(!is.finite(populacao_padrao_2019)) ||
+  any(populacao_padrao_2019 <= 0) ||
+  abs(sum(populacao_padrao_2019) - 1) > 1e-10
+) {
+  stop("O vetor da população-padrão de 2019 é inválido.")
 }
 
-# Como o CSV contém os erros-padrão de cada domínio, mas não a matriz de
-# covariância entre as faixas etárias, a variância abaixo é uma aproximação que
-# trata as estimativas etárias como independentes. A estimativa pontual, por sua
-# vez, é a média padronizada exata dos resultados presentes no CSV.
-prevalencias_padronizadas <- contribuicoes_padronizacao |>
-  group_by(
-    pesquisa,
-    ano,
-    sexo,
-    indicador
-  ) |>
-  summarise(
-    estimativa = sum(contribuicao_estimativa),
-    variancia_aproximada = sum(contribuicao_variancia),
-    erro_padrao = sqrt(variancia_aproximada),
-    .groups = "drop"
-  ) |>
+# ----- POF 2002-2003 -----
+
+des_pof02_padronizado_2019 <- survey::svystandardize(
+  design = des_pof02,
+  by = ~faixa_idade,
+  over = ~sexo,
+  population = populacao_padrao_2019
+)
+
+prev_sobrepeso_25a29_pad_pof02 <- svyby(
+  formula = ~sobrepeso_25a29,
+  by = ~sexo,
+  design = des_pof02_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_sobrepeso_25a29_pad_pof02) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_sobrepeso_25a29_pad_pof02 <- prev_sobrepeso_25a29_pad_pof02 |>
   mutate(
-    # Intervalo logit de 95%, coerente com o método empregado nas prevalências
-    # específicas e necessariamente contido entre zero e um.
-    estimativa_logit = pmin(
-      pmax(estimativa, 1e-8),
-      1 - 1e-8
-    ),
-    erro_padrao_logit = erro_padrao /
-      (estimativa_logit * (1 - estimativa_logit)),
-    ic_inferior = plogis(
-      qlogis(estimativa_logit) -
-        qnorm(0.975) * erro_padrao_logit
-    ),
-    ic_superior = plogis(
-      qlogis(estimativa_logit) +
-        qnorm(0.975) * erro_padrao_logit
+    pesquisa = "POF 2002-2003",
+    ano = 2003L,
+    indicador = "Sobrepeso (25–<30)",
+    .before = 1
+  )
+
+prev_excesso_peso_pad_pof02 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo,
+  design = des_pof02_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_pad_pof02) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_excesso_peso_pad_pof02 <- prev_excesso_peso_pad_pof02 |>
+  mutate(
+    pesquisa = "POF 2002-2003",
+    ano = 2003L,
+    indicador = "Excesso de peso (≥25)",
+    .before = 1
+  )
+
+prev_obesidade_pad_pof02 <- svyby(
+  formula = ~obesidade,
+  by = ~sexo,
+  design = des_pof02_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_obesidade_pad_pof02) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_obesidade_pad_pof02 <- prev_obesidade_pad_pof02 |>
+  mutate(
+    pesquisa = "POF 2002-2003",
+    ano = 2003L,
+    indicador = "Obesidade (≥30)",
+    .before = 1
+  )
+
+# ----- POF 2008-2009 -----
+
+des_pof08_padronizado_2019 <- survey::svystandardize(
+  design = des_pof08,
+  by = ~faixa_idade,
+  over = ~sexo,
+  population = populacao_padrao_2019
+)
+
+prev_sobrepeso_25a29_pad_pof08 <- svyby(
+  formula = ~sobrepeso_25a29,
+  by = ~sexo,
+  design = des_pof08_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_sobrepeso_25a29_pad_pof08) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_sobrepeso_25a29_pad_pof08 <- prev_sobrepeso_25a29_pad_pof08 |>
+  mutate(
+    pesquisa = "POF 2008-2009",
+    ano = 2009L,
+    indicador = "Sobrepeso (25–<30)",
+    .before = 1
+  )
+
+prev_excesso_peso_pad_pof08 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo,
+  design = des_pof08_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_pad_pof08) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_excesso_peso_pad_pof08 <- prev_excesso_peso_pad_pof08 |>
+  mutate(
+    pesquisa = "POF 2008-2009",
+    ano = 2009L,
+    indicador = "Excesso de peso (≥25)",
+    .before = 1
+  )
+
+prev_obesidade_pad_pof08 <- svyby(
+  formula = ~obesidade,
+  by = ~sexo,
+  design = des_pof08_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_obesidade_pad_pof08) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_obesidade_pad_pof08 <- prev_obesidade_pad_pof08 |>
+  mutate(
+    pesquisa = "POF 2008-2009",
+    ano = 2009L,
+    indicador = "Obesidade (≥30)",
+    .before = 1
+  )
+
+# ----- PNS 2013 -----
+
+des_pns13_padronizado_2019 <- survey::svystandardize(
+  design = des_pns13,
+  by = ~faixa_idade,
+  over = ~sexo,
+  population = populacao_padrao_2019
+)
+
+prev_sobrepeso_25a29_pad_pns13 <- svyby(
+  formula = ~sobrepeso_25a29,
+  by = ~sexo,
+  design = des_pns13_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_sobrepeso_25a29_pad_pns13) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_sobrepeso_25a29_pad_pns13 <- prev_sobrepeso_25a29_pad_pns13 |>
+  mutate(
+    pesquisa = "PNS 2013",
+    ano = 2013L,
+    indicador = "Sobrepeso (25–<30)",
+    .before = 1
+  )
+
+prev_excesso_peso_pad_pns13 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo,
+  design = des_pns13_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_pad_pns13) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_excesso_peso_pad_pns13 <- prev_excesso_peso_pad_pns13 |>
+  mutate(
+    pesquisa = "PNS 2013",
+    ano = 2013L,
+    indicador = "Excesso de peso (≥25)",
+    .before = 1
+  )
+
+prev_obesidade_pad_pns13 <- svyby(
+  formula = ~obesidade,
+  by = ~sexo,
+  design = des_pns13_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_obesidade_pad_pns13) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_obesidade_pad_pns13 <- prev_obesidade_pad_pns13 |>
+  mutate(
+    pesquisa = "PNS 2013",
+    ano = 2013L,
+    indicador = "Obesidade (≥30)",
+    .before = 1
+  )
+
+# ----- PNS 2019 -----
+
+des_pns19_padronizado_2019 <- survey::svystandardize(
+  design = des_pns19,
+  by = ~faixa_idade,
+  over = ~sexo,
+  population = populacao_padrao_2019
+)
+
+prev_sobrepeso_25a29_pad_pns19 <- svyby(
+  formula = ~sobrepeso_25a29,
+  by = ~sexo,
+  design = des_pns19_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_sobrepeso_25a29_pad_pns19) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_sobrepeso_25a29_pad_pns19 <- prev_sobrepeso_25a29_pad_pns19 |>
+  mutate(
+    pesquisa = "PNS 2019",
+    ano = 2019L,
+    indicador = "Sobrepeso (25–<30)",
+    .before = 1
+  )
+
+prev_excesso_peso_pad_pns19 <- svyby(
+  formula = ~excesso_peso,
+  by = ~sexo,
+  design = des_pns19_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_excesso_peso_pad_pns19) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_excesso_peso_pad_pns19 <- prev_excesso_peso_pad_pns19 |>
+  mutate(
+    pesquisa = "PNS 2019",
+    ano = 2019L,
+    indicador = "Excesso de peso (≥25)",
+    .before = 1
+  )
+
+prev_obesidade_pad_pns19 <- svyby(
+  formula = ~obesidade,
+  by = ~sexo,
+  design = des_pns19_padronizado_2019,
+  FUN = survey::svyciprop,
+  method = "logit",
+  vartype = c("se", "ci"),
+  level = 0.95,
+  na.rm = TRUE,
+  keep.names = FALSE
+) |>
+  as_tibble()
+
+names(prev_obesidade_pad_pns19) <- c(
+  "sexo", "estimativa", "erro_padrao", "ic_inferior", "ic_superior"
+)
+
+prev_obesidade_pad_pns19 <- prev_obesidade_pad_pns19 |>
+  mutate(
+    pesquisa = "PNS 2019",
+    ano = 2019L,
+    indicador = "Obesidade (≥30)",
+    .before = 1
+  )
+
+# Consolidação dos resultados produzidos diretamente pelo pacote survey.
+prevalencias_padronizadas <- bind_rows(
+  prev_sobrepeso_25a29_pad_pof02,
+  prev_excesso_peso_pad_pof02,
+  prev_obesidade_pad_pof02,
+  prev_sobrepeso_25a29_pad_pof08,
+  prev_excesso_peso_pad_pof08,
+  prev_obesidade_pad_pof08,
+  prev_sobrepeso_25a29_pad_pns13,
+  prev_excesso_peso_pad_pns13,
+  prev_obesidade_pad_pns13,
+  prev_sobrepeso_25a29_pad_pns19,
+  prev_excesso_peso_pad_pns19,
+  prev_obesidade_pad_pns19
+) |>
+  mutate(
+    sexo = as.character(sexo),
+    sexo_rotulo = recode(
+      sexo,
+      M = "Homens",
+      F = "Mulheres"
     ),
     coeficiente_variacao_pct = if_else(
       estimativa > 0,
@@ -566,14 +956,14 @@ prevalencias_padronizadas <- contribuicoes_padronizacao |>
     estimativa_pct = 100 * estimativa,
     ic_inferior_pct = 100 * ic_inferior,
     ic_superior_pct = 100 * ic_superior,
-    sexo_rotulo = recode(
-      sexo,
-      M = "Homens",
-      F = "Mulheres"
-    ),
     padronizacao = paste(
-      "Estrutura etária da população brasileira projetada para 2019,",
-      "ambos os sexos, IBGE, revisão 2024"
+      "Padronização direta com survey::svystandardize();",
+      "estrutura etária da população brasileira de 2019, ambos os sexos,",
+      "IBGE, Projeções da População, revisão 2024"
+    ),
+    metodo_inferencia = paste(
+      "Linearização de Taylor no desenho padronizado;",
+      "IC 95% logit com survey::svyciprop()"
     )
   ) |>
   select(
@@ -583,6 +973,7 @@ prevalencias_padronizadas <- contribuicoes_padronizacao |>
     sexo_rotulo,
     indicador,
     padronizacao,
+    metodo_inferencia,
     estimativa,
     erro_padrao,
     coeficiente_variacao_pct,
@@ -598,7 +989,70 @@ prevalencias_padronizadas <- contribuicoes_padronizacao |>
     ano
   )
 
+# A decomposição abaixo é mantida somente para auditar a estimativa pontual.
+# Ela não é usada para calcular o erro-padrão ou o intervalo de confiança.
+contribuicoes_padronizacao <- prevalencias_idade |>
+  mutate(
+    faixa_idade = factor(
+      faixa_idade,
+      levels = faixas_idade,
+      ordered = TRUE
+    )
+  ) |>
+  left_join(
+    pesos_etarios_2019,
+    by = "faixa_idade"
+  ) |>
+  mutate(
+    contribuicao_estimativa = peso_etario_2019 * estimativa
+  )
+
+if (any(is.na(contribuicoes_padronizacao$peso_etario_2019))) {
+  stop(
+    "Há grupos etários das prevalências sem correspondência nos pesos de 2019."
+  )
+}
+
+auditoria_estimativa_padronizada <- contribuicoes_padronizacao |>
+  group_by(
+    pesquisa,
+    ano,
+    sexo,
+    indicador
+  ) |>
+  summarise(
+    estimativa_por_componentes = sum(contribuicao_estimativa),
+    .groups = "drop"
+  ) |>
+  left_join(
+    prevalencias_padronizadas |>
+      select(
+        pesquisa,
+        ano,
+        sexo,
+        indicador,
+        estimativa_survey = estimativa
+      ),
+    by = c("pesquisa", "ano", "sexo", "indicador")
+  ) |>
+  mutate(
+    diferenca_absoluta = abs(
+      estimativa_por_componentes - estimativa_survey
+    )
+  )
+
+if (
+  any(!is.finite(auditoria_estimativa_padronizada$diferenca_absoluta)) ||
+  max(auditoria_estimativa_padronizada$diferenca_absoluta) > 1e-8
+) {
+  stop(
+    "A estimativa de survey::svystandardize() não coincidiu com a média ponderada ",
+    "das prevalências etárias. Revise a ordem da população-padrão."
+  )
+}
+
 print(prevalencias_padronizadas, n = Inf)
+print(auditoria_estimativa_padronizada, n = Inf)
 
 
 #--- Exportação das tabelas ----------------------------------------------------
@@ -659,6 +1113,15 @@ write_csv(
   file.path(
     diretorio_tabelas,
     "prevalencias_padronizadas_etaria_2019.csv"
+  ),
+  na = ""
+)
+
+write_csv(
+  auditoria_estimativa_padronizada,
+  file.path(
+    diretorio_tabelas,
+    "auditoria_padronizacao_survey_2019.csv"
   ),
   na = ""
 )
@@ -730,7 +1193,11 @@ dados_grafico_idade <- prevalencias_idade |>
     ),
     indicador = factor(
       indicador,
-      levels = c("Sobrepeso", "Obesidade"),
+      levels = c(
+        "Sobrepeso (25–<30)",
+        "Excesso de peso (≥25)",
+        "Obesidade (≥30)"
+      ),
       ordered = TRUE
     ),
     sexo_rotulo = recode(
@@ -772,7 +1239,7 @@ grafico_prevalencia_idade <- ggplot(
     expand = expansion(mult = c(0.02, 0.08))
   ) +
   labs(
-    title = "Prevalência de sobrepeso e obesidade por idade e sexo",
+    title = "Prevalências antropométricas por idade e sexo",
     subtitle = paste(
       "Brasil, POF 2002-2003 e 2008-2009;",
       "PNS 2013 e 2019 — intervalos de confiança de 95%"
@@ -783,6 +1250,8 @@ grafico_prevalencia_idade <- ggplot(
     caption = paste(
       "Fonte: IBGE, Pesquisa de Orçamentos Familiares 2002-2003 e",
       "2008-2009; Pesquisa Nacional de Saúde 2013 e 2019.",
+      "\nNota: sobrepeso = 25 ≤ IMC < 30 kg/m²; excesso de peso = IMC ≥ 25 kg/m²",
+      "e inclui as pessoas com obesidade; obesidade = IMC ≥ 30 kg/m².",
       "\nElaboração própria."
     )
   ) +
@@ -802,7 +1271,11 @@ dados_grafico_padronizado <- prevalencias_padronizadas |>
     ),
     indicador = factor(
       indicador,
-      levels = c("Sobrepeso", "Obesidade"),
+      levels = c(
+        "Sobrepeso (25–<30)",
+        "Excesso de peso (≥25)",
+        "Obesidade (≥30)"
+      ),
       ordered = TRUE
     )
   )
@@ -836,7 +1309,7 @@ grafico_prevalencia_padronizada <- ggplot(
   ) +
   facet_wrap(
     vars(indicador),
-    ncol = 2,
+    ncol = 3,
     scales = "free_y"
   ) +
   scale_color_manual(values = cores_sexo) +
@@ -855,8 +1328,8 @@ grafico_prevalencia_padronizada <- ggplot(
   ) +
   labs(
     title = paste(
-      "Evolução da prevalência padronizada de",
-      "sobrepeso e obesidade"
+      "Evolução das prevalências antropométricas",
+      "padronizadas por idade"
     ),
     subtitle = paste(
       "População de 20 anos ou mais; estrutura etária fixa da",
@@ -870,8 +1343,11 @@ grafico_prevalencia_padronizada <- ggplot(
       "Fonte: IBGE, Pesquisa de Orçamentos Familiares 2002-2003 e",
       "2008-2009; Pesquisa Nacional de Saúde 2013 e 2019;",
       "Projeções da População, revisão 2024.",
-      "\nNota: padrão de 2019 formado pela população de ambos os sexos;",
-      "intervalos de 95% aproximados sem covariâncias entre domínios etários.",
+      "\nNota: sobrepeso = 25 ≤ IMC < 30 kg/m²; excesso de peso = IMC ≥ 25 kg/m²",
+      "e inclui as pessoas com obesidade; obesidade = IMC ≥ 30 kg/m².",
+      "Padrão de 2019 formado pela população de ambos os sexos;",
+      "padronização direta com survey::svystandardize();",
+      "IC 95% logit calculado no desenho padronizado.",
       "\nElaboração própria."
     )
   ) +
@@ -913,7 +1389,7 @@ ggsave(
     "prevalencia_padronizada_estrutura_2019.png"
   ),
   plot = grafico_prevalencia_padronizada,
-  width = 11,
+  width = 14,
   height = 6.5,
   units = "in",
   dpi = 320,
@@ -921,5 +1397,7 @@ ggsave(
 )
 
 message(
-  "Padronização concluída. Tabelas e figuras salvas em dados/output/."
+  "Padronização direta concluída com survey::svystandardize().\n",
+  "Tabelas: ", diretorio_tabelas, "\n",
+  "Figura: ", diretorio_figuras
 )
