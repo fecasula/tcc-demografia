@@ -355,10 +355,15 @@ referencias_ondas <- tribble(
 ) |>
   mutate(
     fonte_riscos_relativos = paste0(
-      "DI ANGELANTONIO, E. et al. Body-mass index and all-cause mortality: ",
-      "individual-participant-data meta-analysis of 239 prospective studies ",
-      "in four continents. The Lancet, v. 388, p. 776-786, 2016. ",
-      "DOI: 10.1016/S0140-6736(16)30175-1."
+      "LOBSTEIN, T.; JACKSON-LEACH, R. Workpackage 7: Overweight and ",
+      "Obesity: report on data collection for overweight and obesity ",
+      "prevalence and related relative risks. London: International ",
+      "Association for the Study of Obesity, 2010. Parâmetros centrais ",
+      "de mortalidade geral por sexo e idade."
+    ),
+    aplicacao_riscos_relativos = paste0(
+      "RR ajustado = 1 + fator etário x (RR-base - 1); faixas da fonte ",
+      "compatibilizadas com os intervalos decenais da análise."
     ),
     cenario = "Eliminação do IMC >= 25 kg/m²",
     incerteza_rr = "Não propagada; medidas centrais fixas.",
@@ -442,19 +447,22 @@ tema_abnt <- theme_minimal(base_size = 11, base_family = "serif") +
 
 fonte_exposicao_rr <- paste0(
   "Fonte: IBGE, POF 2002-2003 e 2008-2009; IBGE, PNS 2013 e 2019; ",
-  "Di Angelantonio et al. (2016). Elaboração própria."
+  "DYNAMO-HIA (Lobstein; Jackson-Leach, 2010), riscos relativos por ",
+  "sexo e idade. Elaboração própria."
 )
 
 fonte_tabua_rr <- paste0(
   "Fonte: IBGE, POF 2002-2003 e 2008-2009; IBGE, PNS 2013 e 2019; ",
-  "IBGE, Tábuas Completas de Mortalidade; Di Angelantonio et al. ",
-  "(2016). Elaboração própria."
+  "IBGE, Tábuas Completas de Mortalidade; DYNAMO-HIA (Lobstein; ",
+  "Jackson-Leach, 2010), riscos relativos por sexo e idade. ",
+  "Elaboração própria."
 )
 
 fonte_sim_rr <- paste0(
   "Fonte: IBGE, POF 2002-2003 e 2008-2009; IBGE, PNS 2013 e 2019; ",
-  "MS/SVSA/CGIAE, SIM, óbitos por ocorrência; Di Angelantonio et al. ",
-  "(2016). Elaboração própria."
+  "MS/SVSA/CGIAE, SIM, óbitos por ocorrência; DYNAMO-HIA ",
+  "(Lobstein; Jackson-Leach, 2010), riscos relativos por sexo e idade. ",
+  "Elaboração própria."
 )
 
 grafico_paf_idade <- ggplot(
@@ -483,7 +491,10 @@ grafico_paf_idade <- ggplot(
   ) +
   labs(
     title = "Fração atribuível populacional por idade e sexo",
-    subtitle = "Brasil, quatro ondas; IC 95% obtido pelas réplicas bootstrap",
+    subtitle = paste0(
+      "Brasil, quatro ondas; RR por sexo e idade; IC 95% obtido pelas ",
+      "réplicas bootstrap"
+    ),
     x = "Grupo etário",
     y = "Fração atribuível populacional",
     color = "Pesquisa",

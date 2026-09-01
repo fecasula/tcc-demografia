@@ -30,10 +30,15 @@
 #   preservada.
 #
 # Observação sobre os riscos relativos
-#   O arquivo df_RR.csv fornecido contém riscos categoriais centrais, mas não
-#   possui uma coluna de sexo. Por isso, a mesma tabela de RR é aplicada aos
-#   dois sexos. A separação por sexo permanece na exposição, na mortalidade e
-#   na tábua de vida. RR_ci_l e RR_ci_u não entram em nenhum cálculo.
+#   O arquivo riscos_relativos_sexo_idade.xlsx contém os riscos centrais de
+#   mortalidade por todas as causas do DYNAMO-HIA, diferenciados por sexo,
+#   categoria de IMC e idade. O relatório agrupa o IMC em <25, 25 a <30 e
+#   >=30 kg/m². Para preservar as seis parcelas da distribuição amostral,
+#   baixo peso e peso normal recebem o RR de IMC <25; os três graus de
+#   obesidade recebem o RR único de IMC >=30. Os multiplicadores etários são
+#   aplicados ao excesso de risco: RR' = 1 + A * (RR - 1).
+#   Utilizam-se somente as medidas centrais; a incerteza dos RRs não é
+#   propagada no bootstrap.
 #-------------------------------------------------------------------------------
 
 rm(list = ls(all = TRUE))
@@ -49,6 +54,7 @@ pacman::p_load(
   svrep,
   tidyverse,
   janitor,
+  readxl,
   scales,
   here
 )
@@ -71,7 +77,8 @@ if (!file.exists(caminho_pof)) {
 }
 
 caminho_rr <- here::here(
-  "dados", "raw", "riscos_relativos", "df_RR.csv"
+  "dados", "raw", "riscos_relativos",
+  "riscos_relativos_sexo_idade.xlsx"
 )
 
 caminho_tabua <- here::here(
@@ -273,47 +280,140 @@ readr::write_csv(
 
 print(perfil_amostral)
 
-#--- 3. Ler os riscos relativos centrais --------------------------------------
+#--- 3. Ler e harmonizar os riscos relativos por sexo e idade ----------------
 
-message("[3/9] Ler os riscos relativos categoriais centrais")
+message("[3/9] Ler e harmonizar os riscos relativos por sexo e idade")
 
-rr <- readr::read_delim(
+# A planilha mantém separados o RR-base por categoria de IMC e o multiplicador
+# etário A. O RR usado no cálculo é refeito aqui para que a regra substantiva
+# permaneça visível no próprio script: RR' = 1 + A * (RR-base - 1).
+rr_fonte <- readxl::read_excel(
   caminho_rr,
-  delim = ";",
-  locale = readr::locale(decimal_mark = ",", grouping_mark = "."),
-  trim_ws = TRUE,
-  show_col_types = FALSE
+  sheet = 1
 ) |>
   janitor::clean_names() |>
   transmute(
-    categoria_imc = as.character(categoria_imc),
-    rr = as.numeric(rr)
+    causa = stringr::str_squish(as.character(causa)),
+    categoria_rr = stringr::str_to_lower(
+      stringr::str_squish(as.character(imc))
+    ),
+    sexo = case_when(
+      stringr::str_to_lower(stringr::str_squish(as.character(sexo))) ==
+        "homens" ~ "M",
+      stringr::str_to_lower(stringr::str_squish(as.character(sexo))) ==
+        "mulheres" ~ "F",
+      TRUE ~ NA_character_
+    ),
+    faixa_rr = stringr::str_to_lower(
+      stringr::str_squish(as.character(idade))
+    ),
+    fator_idade = as.numeric(fator_idade),
+    rr_base = as.numeric(fator_imc),
+    rr_registrado = as.numeric(rr)
+  ) |>
+  mutate(
+    faixa_rr = case_when(
+      faixa_rr == "70_mais" ~ "70+",
+      TRUE ~ faixa_rr
+    ),
+    rr = 1 + fator_idade * (rr_base - 1)
   )
 
-if (!setequal(rr$categoria_imc, categorias_imc)) {
+categorias_rr_esperadas <- c("normal", "sobrepeso", "obesidade")
+faixas_rr_esperadas <- c("20-49", "50-59", "60-69", "70+")
+
+chaves_rr_esperadas <- tidyr::expand_grid(
+  sexo = c("M", "F"),
+  faixa_rr = faixas_rr_esperadas,
+  categoria_rr = categorias_rr_esperadas
+)
+
+if (any(is.na(rr_fonte$sexo)) ||
+    any(!is.finite(rr_fonte$fator_idade)) ||
+    any(!is.finite(rr_fonte$rr_base)) ||
+    any(!is.finite(rr_fonte$rr_registrado)) ||
+    any(!is.finite(rr_fonte$rr))) {
+  stop("A planilha de riscos relativos contém valor ausente ou não numérico.")
+}
+
+if (any(stringr::str_to_lower(rr_fonte$causa) != "all cause mortality")) {
+  stop("A planilha precisa conter somente riscos de mortalidade geral.")
+}
+
+if (anyDuplicated(rr_fonte[c("sexo", "faixa_rr", "categoria_rr")]) > 0L ||
+    nrow(rr_fonte) != nrow(chaves_rr_esperadas) ||
+    nrow(dplyr::anti_join(
+      chaves_rr_esperadas,
+      rr_fonte,
+      by = c("sexo", "faixa_rr", "categoria_rr")
+    )) > 0L) {
   stop(
-    "df_RR.csv precisa conter exatamente: ",
-    paste(categorias_imc, collapse = ", ")
+    "A planilha não contém exatamente as 24 combinações esperadas de ",
+    "sexo x idade x categoria de IMC."
   )
 }
 
-if (any(!is.finite(rr$rr)) || any(rr$rr <= 0)) {
-  stop("Todos os riscos relativos centrais precisam ser positivos e finitos.")
+if (any(abs(rr_fonte$rr - rr_fonte$rr_registrado) > 1e-10)) {
+  stop(
+    "A coluna rr da planilha não respeita RR' = 1 + A * (RR-base - 1)."
+  )
 }
 
-if (rr$rr[rr$categoria_imc == "normal"] != 1) {
-  stop("A categoria 'normal' precisa ser a referência, com RR igual a 1.")
+if (any(rr_fonte$rr <= 0) ||
+    any(abs(rr_fonte$rr[rr_fonte$categoria_rr == "normal"] - 1) > 1e-10)) {
+  stop("Os RRs precisam ser positivos e IMC <25 deve permanecer com RR = 1.")
+}
+
+# Compatibilização explícita com os intervalos decenais e com as seis parcelas
+# de IMC mantidas na estimação amostral.
+rr <- tidyr::expand_grid(
+  sexo = c("M", "F"),
+  faixa_idade = faixas_idade,
+  categoria_imc = categorias_imc
+) |>
+  mutate(
+    faixa_rr = case_when(
+      faixa_idade %in% c("20-29", "30-39", "40-49") ~ "20-49",
+      faixa_idade == "50-59" ~ "50-59",
+      faixa_idade == "60-69" ~ "60-69",
+      faixa_idade %in% c("70-79", "80+") ~ "70+"
+    ),
+    categoria_rr = case_when(
+      categoria_imc %in% c("baixo", "normal") ~ "normal",
+      categoria_imc == "sobrepeso" ~ "sobrepeso",
+      categoria_imc %in% c("obesidade1", "obesidade2", "obesidade3") ~
+        "obesidade"
+    )
+  ) |>
+  left_join(
+    rr_fonte |>
+      select(
+        sexo, faixa_rr, categoria_rr,
+        fator_idade, rr_base, rr
+      ),
+    by = c("sexo", "faixa_rr", "categoria_rr")
+  )
+
+if (nrow(rr) != 2L * length(faixas_idade) * length(categorias_imc) ||
+    any(!is.finite(rr$rr))) {
+  stop("A harmonização dos RRs não cobriu todas as células analíticas.")
 }
 
 rr <- rr |>
   mutate(
+    sexo = factor(sexo, levels = c("M", "F")),
+    faixa_idade = factor(
+      faixa_idade,
+      levels = faixas_idade,
+      ordered = TRUE
+    ),
     categoria_imc = factor(
       categoria_imc,
       levels = categorias_imc,
       ordered = TRUE
     )
   ) |>
-  arrange(categoria_imc)
+  arrange(sexo, faixa_idade, categoria_imc)
 
 readr::write_csv(
   rr,
@@ -716,14 +816,18 @@ ajuste_bootstrap <- survey::withReplicates(
         proporcao = total_ponderado / total_celula
       ) |>
       ungroup() |>
-      left_join(rr, by = "categoria_imc") |>
+      left_join(
+        rr,
+        by = c("sexo", "faixa_idade", "categoria_imc")
+      ) |>
       arrange(sexo, faixa_idade, categoria_imc)
 
     # B. PAF por sexo e faixa etária.
     #
     # Risco médio observado: soma(p_k * RR_k).
     # Risco médio contrafactual: o baixo peso é preservado; todas as pessoas
-    # com IMC >= 25 são transferidas para a categoria normal (RR = 1).
+    # com IMC >= 25 são transferidas para a categoria de referência (RR = 1).
+    # No DYNAMO-HIA, baixo peso e peso normal integram conjuntamente IMC <25.
     # PAF = 1 - risco médio contrafactual / risco médio observado.
     paf_idade <- distribuicao_imc |>
       group_by(sexo, faixa_idade) |>
@@ -1176,8 +1280,8 @@ grafico_paf_idade <- ggplot(
     y = "Fração atribuível populacional",
     color = "Sexo",
     caption = paste0(
-      "Fonte: IBGE, POF 2008-2009; Global BMI Mortality Collaboration (2016), ",
-      "conforme riscos relativos informados em df_RR.csv. ",
+      "Fonte: IBGE, POF 2008-2009; DYNAMO-HIA ",
+      "(Lobstein; Jackson-Leach, 2010), riscos relativos por sexo e idade. ",
       "Elaboração própria."
     )
   ) +
@@ -1205,8 +1309,8 @@ grafico_paf_sintetica <- ggplot(
     y = "Fração atribuível populacional",
     caption = paste0(
       "Fonte: IBGE, POF 2008-2009 e Tábua de Vida 2009; ",
-      "Global BMI Mortality Collaboration (2016), conforme riscos relativos ",
-      "informados em df_RR.csv. Elaboração própria."
+      "DYNAMO-HIA (Lobstein; Jackson-Leach, 2010), riscos relativos por ",
+      "sexo e idade. Elaboração própria."
     )
   ) +
   tema_abnt
@@ -1247,8 +1351,8 @@ grafico_mortes_idade <- ggplot(
     caption = paste0(
       "Fonte: IBGE, POF 2008-2009; MS/SVSA/CGIAE, SIM 2009, ",
       "óbitos por ocorrência; ",
-      "Global BMI Mortality Collaboration (2016), conforme riscos relativos ",
-      "informados em df_RR.csv. Elaboração própria."
+      "DYNAMO-HIA (Lobstein; Jackson-Leach, 2010), riscos relativos por ",
+      "sexo e idade. Elaboração própria."
     )
   ) +
   tema_abnt
@@ -1279,8 +1383,8 @@ grafico_mortes_total <- ggplot(
     caption = paste0(
       "Fonte: IBGE, POF 2008-2009; MS/SVSA/CGIAE, SIM 2009, ",
       "óbitos por ocorrência; ",
-      "Global BMI Mortality Collaboration (2016), conforme riscos relativos ",
-      "informados em df_RR.csv. Elaboração própria."
+      "DYNAMO-HIA (Lobstein; Jackson-Leach, 2010), riscos relativos por ",
+      "sexo e idade. Elaboração própria."
     )
   ) +
   tema_abnt
@@ -1310,8 +1414,8 @@ grafico_pgev20 <- ggplot(
     y = "Ganho em anos de vida",
     caption = paste0(
       "Fonte: IBGE, POF 2008-2009 e Tábua de Vida 2009; ",
-      "Global BMI Mortality Collaboration (2016), conforme riscos relativos ",
-      "informados em df_RR.csv. Elaboração própria."
+      "DYNAMO-HIA (Lobstein; Jackson-Leach, 2010), riscos relativos por ",
+      "sexo e idade. Elaboração própria."
     )
   ) +
   tema_abnt
