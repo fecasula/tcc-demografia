@@ -411,39 +411,14 @@ readr::write_csv(
 
 message("[5/6] Construir os gráficos comparativos")
 
-cores_ondas <- c(
-  "POF 2002-2003" = "#264653",
-  "POF 2008-2009" = "#2A9D8F",
-  "PNS 2013" = "#E9C46A",
-  "PNS 2019" = "#C14953"
-)
-
-formas_ondas <- c(
-  "POF 2002-2003" = 16,
-  "POF 2008-2009" = 17,
-  "PNS 2013" = 15,
-  "PNS 2019" = 18
-)
+source(here::here("script", "figuras_abnt.R"))
 
 cores_sexo <- c(
   "Homens" = "#1F4E79",
   "Mulheres" = "#8A3B5C"
 )
 
-tema_abnt <- theme_minimal(base_size = 11, base_family = "serif") +
-  theme(
-    plot.title = element_text(face = "bold", size = 12, hjust = 0),
-    plot.subtitle = element_text(size = 10, hjust = 0, margin = margin(b = 8)),
-    plot.caption = element_text(size = 8, hjust = 0, margin = margin(t = 10)),
-    axis.title = element_text(size = 10),
-    axis.text = element_text(color = "black"),
-    legend.position = "bottom",
-    legend.title = element_text(face = "bold"),
-    strip.text = element_text(face = "bold"),
-    panel.grid.minor = element_blank(),
-    panel.grid.major.x = element_blank(),
-    plot.margin = margin(10, 12, 10, 10)
-  )
+tema_abnt <- tema_figura_abnt()
 
 fonte_exposicao_rr <- paste0(
   "Fonte: IBGE, POF 2002-2003 e 2008-2009; IBGE, PNS 2013 e 2019; ",
@@ -478,14 +453,14 @@ grafico_paf_idade <- ggplot(
   geom_errorbar(
     aes(ymin = ic_inferior_pct, ymax = ic_superior_pct),
     width = 0.10,
-    linewidth = 0.35,
-    alpha = 0.65
+    linewidth = 0.5,
+    alpha = 0.85
   ) +
-  geom_line(linewidth = 0.72) +
-  geom_point(size = 2.0) +
+  geom_line(linewidth = 0.85) +
+  geom_point(size = 2.5) +
   facet_wrap(~sexo_rotulo, ncol = 1) +
-  scale_color_manual(values = cores_ondas) +
-  scale_shape_manual(values = formas_ondas) +
+  scale_color_manual(values = cores_pesquisas_abnt) +
+  scale_shape_manual(values = formas_pesquisas_abnt) +
   scale_y_continuous(
     labels = label_number(decimal.mark = ",", suffix = "%", accuracy = 0.1)
   ) +
@@ -496,7 +471,7 @@ grafico_paf_idade <- ggplot(
       "réplicas bootstrap"
     ),
     x = "Grupo etário",
-    y = "Fração atribuível populacional",
+    y = "FAP",
     color = "Pesquisa",
     shape = "Pesquisa",
     caption = fonte_exposicao_rr
@@ -509,6 +484,7 @@ grafico_paf_sintetica <- ggplot(
     x = ano_mortalidade,
     y = estimativa_pct,
     color = sexo_rotulo,
+    shape = sexo_rotulo,
     group = sexo_rotulo
   )
 ) +
@@ -518,8 +494,9 @@ grafico_paf_sintetica <- ggplot(
     linewidth = 0.5
   ) +
   geom_line(linewidth = 0.85) +
-  geom_point(size = 2.3) +
+  geom_point(size = 2.8) +
   scale_color_manual(values = cores_sexo) +
+  scale_shape_manual(values = c("Homens" = 16, "Mulheres" = 17)) +
   scale_x_continuous(breaks = c(2003, 2009, 2013, 2019)) +
   scale_y_continuous(
     labels = label_number(decimal.mark = ",", suffix = "%", accuracy = 0.1)
@@ -527,9 +504,10 @@ grafico_paf_sintetica <- ggplot(
   labs(
     title = "Evolução da fração atribuível populacional sintética",
     subtitle = "Ponderação pela distribuição de óbitos da tábua de vida de cada ano",
-    x = "Ano de referência da mortalidade",
-    y = "Fração atribuível populacional",
+    x = "Ano de referência",
+    y = "FAP",
     color = "Sexo",
+    shape = "Sexo",
     caption = fonte_tabua_rr
   ) +
   tema_abnt
@@ -547,14 +525,14 @@ grafico_mortes_idade <- ggplot(
   geom_errorbar(
     aes(ymin = ic_inferior, ymax = ic_superior),
     width = 0.10,
-    linewidth = 0.35,
-    alpha = 0.65
+    linewidth = 0.5,
+    alpha = 0.85
   ) +
-  geom_line(linewidth = 0.72) +
-  geom_point(size = 2.0) +
+  geom_line(linewidth = 0.85) +
+  geom_point(size = 2.5) +
   facet_wrap(~sexo_rotulo, ncol = 1, scales = "free_y") +
-  scale_color_manual(values = cores_ondas) +
-  scale_shape_manual(values = formas_ondas) +
+  scale_color_manual(values = cores_pesquisas_abnt) +
+  scale_shape_manual(values = formas_pesquisas_abnt) +
   scale_y_continuous(
     labels = label_number(decimal.mark = ",", big.mark = ".", accuracy = 1)
   ) +
@@ -575,6 +553,7 @@ grafico_mortes_total <- ggplot(
     x = ano_mortalidade,
     y = estimativa,
     color = sexo_rotulo,
+    shape = sexo_rotulo,
     group = sexo_rotulo
   )
 ) +
@@ -584,8 +563,9 @@ grafico_mortes_total <- ggplot(
     linewidth = 0.5
   ) +
   geom_line(linewidth = 0.85) +
-  geom_point(size = 2.3) +
+  geom_point(size = 2.8) +
   scale_color_manual(values = cores_sexo) +
+  scale_shape_manual(values = c("Homens" = 16, "Mulheres" = 17)) +
   scale_x_continuous(breaks = c(2003, 2009, 2013, 2019)) +
   scale_y_continuous(
     labels = label_number(decimal.mark = ",", big.mark = ".", accuracy = 1)
@@ -593,9 +573,10 @@ grafico_mortes_total <- ggplot(
   labs(
     title = "Evolução do número absoluto de mortes evitáveis",
     subtitle = "Brasil, população de 20 anos ou mais; IC 95% bootstrap",
-    x = "Ano de referência da mortalidade",
+    x = "Ano de referência",
     y = "Número de mortes evitáveis",
     color = "Sexo",
+    shape = "Sexo",
     caption = fonte_sim_rr
   ) +
   tema_abnt
@@ -606,6 +587,7 @@ grafico_pgev20 <- ggplot(
     x = ano_mortalidade,
     y = estimativa,
     color = sexo_rotulo,
+    shape = sexo_rotulo,
     group = sexo_rotulo
   )
 ) +
@@ -615,8 +597,9 @@ grafico_pgev20 <- ggplot(
     linewidth = 0.5
   ) +
   geom_line(linewidth = 0.85) +
-  geom_point(size = 2.3) +
+  geom_point(size = 2.8) +
   scale_color_manual(values = cores_sexo) +
+  scale_shape_manual(values = c("Homens" = 16, "Mulheres" = 17)) +
   scale_x_continuous(breaks = c(2003, 2009, 2013, 2019)) +
   scale_y_continuous(
     labels = label_number(decimal.mark = ",", accuracy = 0.01)
@@ -624,9 +607,10 @@ grafico_pgev20 <- ggplot(
   labs(
     title = "Evolução do potencial ganho em expectativa de vida aos 20 anos",
     subtitle = "Contrafactual de eliminação do IMC >= 25 kg/m²; IC 95% bootstrap",
-    x = "Ano de referência da mortalidade",
+    x = "Ano de referência",
     y = "Ganho em anos de vida",
     color = "Sexo",
+    shape = "Sexo",
     caption = fonte_tabua_rr
   ) +
   tema_abnt
@@ -635,94 +619,34 @@ grafico_pgev20 <- ggplot(
 
 message("[6/6] Salvar os gráficos comparativos")
 
-ggsave(
-  file.path(pasta_graficos, "01_paf_por_idade_e_sexo_4_ondas.png"),
+salvar_figura_abnt(
   grafico_paf_idade,
-  width = 8.27,
-  height = 8.0,
-  units = "in",
-  dpi = 320,
-  bg = "white"
+  file.path(pasta_graficos, "01_paf_por_idade_e_sexo_4_ondas"),
+  altura_cm = 17.5
 )
 
-ggsave(
-  file.path(pasta_graficos, "01_paf_por_idade_e_sexo_4_ondas.pdf"),
-  grafico_paf_idade,
-  width = 8.27,
-  height = 8.0,
-  units = "in"
-)
-
-ggsave(
-  file.path(pasta_graficos, "02_paf_sintetica_4_ondas.png"),
+salvar_figura_abnt(
   grafico_paf_sintetica,
-  width = 8.27,
-  height = 5.5,
-  units = "in",
-  dpi = 320,
-  bg = "white"
+  file.path(pasta_graficos, "02_paf_sintetica_4_ondas"),
+  altura_cm = 11
 )
 
-ggsave(
-  file.path(pasta_graficos, "02_paf_sintetica_4_ondas.pdf"),
-  grafico_paf_sintetica,
-  width = 8.27,
-  height = 5.5,
-  units = "in"
-)
-
-ggsave(
-  file.path(pasta_graficos, "03_mortes_por_idade_e_sexo_4_ondas.png"),
+salvar_figura_abnt(
   grafico_mortes_idade,
-  width = 8.27,
-  height = 8.0,
-  units = "in",
-  dpi = 320,
-  bg = "white"
+  file.path(pasta_graficos, "03_mortes_por_idade_e_sexo_4_ondas"),
+  altura_cm = 17.5
 )
 
-ggsave(
-  file.path(pasta_graficos, "03_mortes_por_idade_e_sexo_4_ondas.pdf"),
-  grafico_mortes_idade,
-  width = 8.27,
-  height = 8.0,
-  units = "in"
-)
-
-ggsave(
-  file.path(pasta_graficos, "04_mortes_evitaveis_4_ondas.png"),
+salvar_figura_abnt(
   grafico_mortes_total,
-  width = 8.27,
-  height = 5.5,
-  units = "in",
-  dpi = 320,
-  bg = "white"
+  file.path(pasta_graficos, "04_mortes_evitaveis_4_ondas"),
+  altura_cm = 11
 )
 
-ggsave(
-  file.path(pasta_graficos, "04_mortes_evitaveis_4_ondas.pdf"),
-  grafico_mortes_total,
-  width = 8.27,
-  height = 5.5,
-  units = "in"
-)
-
-ggsave(
-  file.path(pasta_graficos, "05_pgev20_4_ondas.png"),
+salvar_figura_abnt(
   grafico_pgev20,
-  width = 8.27,
-  height = 5.5,
-  units = "in",
-  dpi = 320,
-  bg = "white"
-)
-
-ggsave(
-  file.path(pasta_graficos, "05_pgev20_4_ondas.pdf"),
-  grafico_pgev20,
-  width = 8.27,
-  height = 5.5,
-  units = "in"
+  file.path(pasta_graficos, "05_pgev20_4_ondas"),
+  altura_cm = 11
 )
 
 message(

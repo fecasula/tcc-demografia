@@ -1129,52 +1129,14 @@ write_csv(
 
 #--- Configuração visual -------------------------------------------------------
 
-cores_pesquisas <- c(
-  "POF 2002-2003" = "#264653",
-  "POF 2008-2009" = "#2A9D8F",
-  "PNS 2013" = "#E9A03B",
-  "PNS 2019" = "#B23A48"
-)
+source("script/figuras_abnt.R")
 
 cores_sexo <- c(
   "Homens" = "#28587B",
   "Mulheres" = "#A23B72"
 )
 
-tema_academico <- theme_minimal(base_size = 11) +
-  theme(
-    plot.title = element_text(
-      face = "bold",
-      size = 14,
-      color = "#222222"
-    ),
-    plot.subtitle = element_text(
-      size = 10.5,
-      color = "#4D4D4D",
-      margin = margin(b = 10)
-    ),
-    plot.caption = element_text(
-      size = 8.5,
-      color = "#555555",
-      hjust = 0,
-      margin = margin(t = 12)
-    ),
-    strip.text = element_text(
-      face = "bold",
-      color = "#222222"
-    ),
-    strip.background = element_rect(
-      fill = "#F2F2F2",
-      color = "#D9D9D9"
-    ),
-    panel.grid.minor = element_blank(),
-    panel.grid.major.x = element_blank(),
-    axis.title = element_text(face = "bold"),
-    axis.text = element_text(color = "#333333"),
-    legend.position = "bottom",
-    legend.title = element_text(face = "bold"),
-    plot.margin = margin(12, 15, 12, 12)
-  )
+tema_academico <- tema_figura_abnt()
 
 
 #--- Gráfico 1: evolução das prevalências por faixa etária --------------------
@@ -1213,6 +1175,7 @@ grafico_prevalencia_idade <- ggplot(
     x = faixa_idade,
     y = estimativa,
     color = pesquisa,
+    shape = pesquisa,
     group = pesquisa
   )
 ) +
@@ -1221,16 +1184,18 @@ grafico_prevalencia_idade <- ggplot(
       ymin = ic_inferior,
       ymax = ic_superior
     ),
-    linewidth = 0.25,
-    alpha = 0.30
+    linewidth = 0.44,
+    alpha = 0.72
   ) +
-  geom_line(linewidth = 0.75) +
-  geom_point(size = 1.8) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 2.15) +
   facet_grid(
     rows = vars(indicador),
-    cols = vars(sexo_rotulo)
+    cols = vars(sexo_rotulo),
+    switch = "y"
   ) +
-  scale_color_manual(values = cores_pesquisas) +
+  scale_color_manual(values = cores_pesquisas_abnt) +
+  scale_shape_manual(values = formas_pesquisas_abnt) +
   scale_y_continuous(
     labels = scales::label_percent(
       accuracy = 1,
@@ -1247,6 +1212,7 @@ grafico_prevalencia_idade <- ggplot(
     x = "Grupo etário",
     y = "Prevalência estimada",
     color = "Pesquisa",
+    shape = "Pesquisa",
     caption = paste(
       "Fonte: IBGE, Pesquisa de Orçamentos Familiares 2002-2003 e",
       "2008-2009; Pesquisa Nacional de Saúde 2013 e 2019.",
@@ -1255,9 +1221,17 @@ grafico_prevalencia_idade <- ggplot(
       "\nElaboração própria."
     )
   ) +
-  tema_academico
+  tema_academico +
+  guides(
+    color = guide_legend(nrow = 2, byrow = TRUE),
+    shape = guide_legend(nrow = 2, byrow = TRUE)
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text.y.left = element_text(angle = 90, size = 9.5)
+  )
 
-print(grafico_prevalencia_idade)
+if (interactive()) print(grafico_prevalencia_idade)
 
 
 #--- Gráfico 2: evolução das prevalências padronizadas ------------------------
@@ -1309,7 +1283,7 @@ grafico_prevalencia_padronizada <- ggplot(
   ) +
   facet_wrap(
     vars(indicador),
-    ncol = 3,
+    ncol = 1,
     scales = "free_y"
   ) +
   scale_color_manual(values = cores_sexo) +
@@ -1326,6 +1300,10 @@ grafico_prevalencia_padronizada <- ggplot(
     ),
     expand = expansion(mult = c(0.03, 0.10))
   ) +
+  scale_x_discrete(labels = c(
+    "POF 2002-2003" = "2003", "POF 2008-2009" = "2009",
+    "PNS 2013" = "2013", "PNS 2019" = "2019"
+  )) +
   labs(
     title = paste(
       "Evolução das prevalências antropométricas",
@@ -1335,7 +1313,7 @@ grafico_prevalencia_padronizada <- ggplot(
       "População de 20 anos ou mais; estrutura etária fixa da",
       "população brasileira projetada para 2019"
     ),
-    x = "Pesquisa",
+    x = "Ano de referência",
     y = "Prevalência padronizada",
     color = "Sexo",
     shape = "Sexo",
@@ -1351,15 +1329,9 @@ grafico_prevalencia_padronizada <- ggplot(
       "\nElaboração própria."
     )
   ) +
-  tema_academico +
-  theme(
-    axis.text.x = element_text(
-      angle = 25,
-      hjust = 1
-    )
-  )
+  tema_academico
 
-print(grafico_prevalencia_padronizada)
+if (interactive()) print(grafico_prevalencia_padronizada)
 
 
 #--- Exportação das figuras ----------------------------------------------------
@@ -1370,30 +1342,10 @@ dir.create(
   showWarnings = FALSE
 )
 
-# ggsave(
-#   filename = file.path(
-#     diretorio_figuras,
-#     "prevalencia_por_idade_sexo.png"
-#   ),
-#   plot = grafico_prevalencia_idade,
-#   width = 12,
-#   height = 8,
-#   units = "in",
-#   dpi = 320,
-#   bg = "white"
-# )
-
-ggsave(
-  filename = file.path(
-    diretorio_figuras,
-    "prevalencia_padronizada_estrutura_2019.png"
-  ),
-  plot = grafico_prevalencia_padronizada,
-  width = 14,
-  height = 6.5,
-  units = "in",
-  dpi = 320,
-  bg = "white"
+salvar_figura_abnt(
+  grafico_prevalencia_padronizada,
+  file.path(diretorio_figuras, "prevalencia_padronizada_estrutura_2019"),
+  altura_cm = 18
 )
 
 message(

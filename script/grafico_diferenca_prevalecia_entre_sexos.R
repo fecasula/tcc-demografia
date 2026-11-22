@@ -263,193 +263,72 @@ cores_diferenca <- c(
   "Sem diferença" = "#666666"
 )
 
-texto_fonte <- str_wrap(
-  paste(
-    "Fonte: IBGE, Pesquisa de Orçamentos Familiares 2002-2003 e",
-    "2008-2009; Pesquisa Nacional de Saúde 2013 e 2019."
-  ),
-  width = 150
+source("script/figuras_abnt.R")
+
+plotar_diferenca_sexo <- function(dados) {
+  ggplot(
+    dados,
+    aes(x = faixa_idade, y = diferenca_pp, fill = direcao_diferenca)
+  ) +
+    geom_hline(yintercept = 0, color = "#333333", linewidth = 0.45) +
+    geom_col(width = 0.72, color = "white", linewidth = 0.2) +
+    geom_text(
+      aes(y = posicao_rotulo, label = rotulo_diferenca),
+      size = 2.8, color = "#17212B"
+    ) +
+    scale_fill_manual(values = cores_diferenca) +
+    scale_y_continuous(
+      limits = c(-limite_eixo, limite_eixo),
+      breaks = pretty_breaks(n = 5),
+      labels = label_number(accuracy = 1, decimal.mark = ",")
+    ) +
+    labs(x = "Grupo etário", y = "Mulheres − homens (p.p.)", fill = NULL) +
+    tema_figura_abnt() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+grafico_completo <- plotar_diferenca_sexo(diferencas_sexo) +
+  facet_wrap(vars(indicador, pesquisa), ncol = 2, axes = "all_x")
+
+if (interactive()) print(grafico_completo)
+
+#--- 5. Salvar o panorama e as figuras por indicador ---------------------------
+
+message("[5/5] Salvar os gráficos em PDF e PNG")
+
+caminho_panorama <- file.path(
+  diretorio_graficos, "diferenca_prevalencias_antropometricas_por_sexo"
 )
-
-texto_nota <- str_wrap(
-  paste(
-    "Nota: valores positivos, representados por barras vermelhas, indicam",
-    "maior prevalência entre mulheres; valores negativos, em azul, indicam",
-    "maior prevalência entre homens. As diferenças são descritivas e foram",
-    "calculadas a partir das estimativas não padronizadas de cada grupo",
-    "etário; não representam testes de hipótese."
-  ),
-  width = 150
-)
-
-texto_definicoes <- str_wrap(
-  paste(
-    "Sobrepeso = 25 ≤ IMC < 30 kg/m²; excesso de peso = IMC ≥ 25 kg/m²,",
-    "incluindo obesidade; obesidade = IMC ≥ 30 kg/m². Elaboração própria."
-  ),
-  width = 150
-)
-
-legenda_figura <- paste(
-  texto_fonte,
-  texto_nota,
-  texto_definicoes,
-  sep = "\n"
-)
-
-grafico_diferenca_sexo <- ggplot(
-  diferencas_sexo,
-  aes(
-    x = faixa_idade,
-    y = diferenca_pp,
-    fill = direcao_diferenca
-  )
-) +
-  geom_hline(
-    yintercept = 0,
-    color = "#333333",
-    linewidth = 0.45
-  ) +
-  geom_col(
-    width = 0.72,
-    color = "white",
-    linewidth = 0.20
-  ) +
-  geom_text(
-    aes(
-      y = posicao_rotulo,
-      label = rotulo_diferenca
-    ),
-    size = 2.35,
-    family = "serif",
-    color = "#222222"
-  ) +
-  facet_grid(
-    rows = vars(indicador),
-    cols = vars(pesquisa)
-  ) +
-  scale_fill_manual(
-    values = cores_diferenca,
-    drop = FALSE
-  ) +
-  scale_y_continuous(
-    limits = c(-limite_eixo, limite_eixo),
-    breaks = pretty_breaks(n = 7),
-    labels = label_number(
-      accuracy = 1,
-      decimal.mark = ","
-    ),
-    expand = expansion(mult = c(0.01, 0.01))
-  ) +
-  labs(
-    title = "Diferença das prevalências antropométricas por sexo",
-    subtitle = paste(
-      "Mulheres menos homens, em pontos percentuais,",
-      "por grupo etário e pesquisa"
-    ),
-    x = "Grupo etário (anos)",
-    y = "Diferença da prevalência (pontos percentuais)",
-    fill = NULL,
-    caption = legenda_figura
-  ) +
-  theme_minimal(
-    base_size = 10.5,
-    base_family = "serif"
-  ) +
-  theme(
-    plot.title = element_text(
-      face = "bold",
-      size = 14,
-      color = "#222222",
-      hjust = 0
-    ),
-    plot.subtitle = element_text(
-      size = 10.5,
-      color = "#444444",
-      margin = margin(b = 10),
-      hjust = 0
-    ),
-    plot.caption = element_text(
-      size = 8.2,
-      color = "#4D4D4D",
-      hjust = 0,
-      lineheight = 1.05,
-      margin = margin(t = 12)
-    ),
-    plot.title.position = "plot",
-    plot.caption.position = "plot",
-    strip.text = element_text(
-      face = "bold",
-      size = 9,
-      color = "#222222"
-    ),
-    strip.background = element_rect(
-      fill = "#F2F2F2",
-      color = "#D0D0D0",
-      linewidth = 0.35
-    ),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.grid.major.y = element_line(
-      color = "#E1E1E1",
-      linewidth = 0.30
-    ),
-    panel.spacing = grid::unit(0.8, "lines"),
-    axis.title = element_text(
-      face = "bold",
-      color = "#222222"
-    ),
-    axis.text = element_text(
-      color = "#333333"
-    ),
-    axis.text.x = element_text(
-      angle = 45,
-      hjust = 1,
-      vjust = 1
-    ),
-    legend.position = "bottom",
-    legend.text = element_text(size = 9),
-    plot.margin = margin(12, 16, 12, 12)
-  )
-
-print(grafico_diferenca_sexo)
-
-
-#--- 5. Salvar em formato vetorial e em alta resolução ------------------------
-
-message("[5/5] Salvar o gráfico em PDF e PNG")
-
 ggsave(
-  filename = file.path(
-    diretorio_graficos,
-    "diferenca_prevalencias_antropometricas_por_sexo.pdf"
-  ),
-  plot = grafico_diferenca_sexo,
-  width = 16,
-  height = 12,
-  units = "in",
-  device = grDevices::cairo_pdf,
-  bg = "white"
+  paste0(caminho_panorama, ".png"), grafico_completo,
+  width = 16, height = 32, units = "cm", dpi = 600, bg = "white"
 )
 
-ggsave(
-  filename = file.path(
-    diretorio_graficos,
-    "diferenca_prevalencias_antropometricas_por_sexo.png"
-  ),
-  plot = grafico_diferenca_sexo,
-  width = 16,
-  height = 12,
-  units = "in",
-  dpi = 400,
-  bg = "white"
+sufixos <- c("sobrepeso", "excesso_de_peso", "obesidade")
+altura_indicador <- 14
+graficos_indicadores <- lapply(seq_along(ordem_indicadores), function(i) {
+  dados_indicador <- filter(diferencas_sexo, indicador == ordem_indicadores[i])
+  grafico_indicador <- plotar_diferenca_sexo(dados_indicador) +
+    facet_wrap(vars(indicador, pesquisa), ncol = 2, axes = "all_x")
+
+  salvar_figura_abnt(
+    grafico_indicador,
+    file.path(
+      diretorio_graficos,
+      paste0("diferenca_prevalencias_por_sexo_", sufixos[i])
+    ),
+    altura_cm = altura_indicador
+  )
+  grafico_indicador
+})
+
+grDevices::cairo_pdf(
+  paste0(caminho_panorama, ".pdf"),
+  width = 16 / 2.54, height = altura_indicador / 2.54, bg = "white"
 )
+tryCatch(walk(graficos_indicadores, print), finally = grDevices::dev.off())
 
 message(
-  "Gráfico concluído. Arquivos salvos em: ",
-  normalizePath(
-    diretorio_graficos,
-    winslash = "/",
-    mustWork = FALSE
-  )
+  "Gráficos salvos em: ",
+  normalizePath(diretorio_graficos, winslash = "/", mustWork = FALSE)
 )

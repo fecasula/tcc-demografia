@@ -1,0 +1,36 @@
+project:
+  type: website
+  output-dir: _site
+  resources:
+    - assets/
+
+website:
+  title: "Felipe Casula"
+  navbar:
+    pinned: true
+    left:
+      - text: "Resumo"
+        href: index.qmd#resumo
+      - text: "Metodologia"
+        href: index.qmd#metodologia
+      - text: "Resultados"
+        href: index.qmd#resultados
+      - text: "Conclusão"
+        href: index.qmd#conclusao
+    right:
+      - icon: github
+        text: "GitHub"
+        href: https://github.com/fecasula/tcc-demografia
+        aria-label: "Repositório do projeto no GitHub"
+
+lang: pt-BR
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    css: estilos.css
+    toc: false
+    anchor-sections: false
+    smooth-scroll: true
+    page-layout: full

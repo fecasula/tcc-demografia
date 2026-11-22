@@ -1210,19 +1210,8 @@ message("[9/9] Criar e salvar os gráficos")
 
 cores_sexo <- c("M" = "#1F4E79", "F" = "#8A3B5C")
 
-tema_abnt <- theme_minimal(base_size = 11, base_family = "serif") +
-  theme(
-    plot.title = element_text(face = "bold", size = 12, hjust = 0),
-    plot.subtitle = element_text(size = 10, hjust = 0, margin = margin(b = 8)),
-    plot.caption = element_text(size = 8, hjust = 0, margin = margin(t = 10)),
-    axis.title = element_text(size = 10),
-    axis.text = element_text(color = "black"),
-    legend.position = "bottom",
-    legend.title = element_text(face = "bold"),
-    panel.grid.minor = element_blank(),
-    panel.grid.major.x = element_blank(),
-    plot.margin = margin(10, 12, 10, 10)
-  )
+source(here::here("script", "figuras_abnt.R"))
+tema_abnt <- tema_figura_abnt()
 
 grafico_paf_idade <- ggplot(
   paf_idade,
@@ -1255,7 +1244,7 @@ grafico_paf_idade <- ggplot(
       "IC 95% bootstrap"
     ),
     x = "Grupo etário",
-    y = "Fração atribuível populacional",
+    y = "FAP",
     color = "Sexo",
     caption = paste0(
       "Fonte: IBGE, PNS 2019; DYNAMO-HIA ",
@@ -1284,7 +1273,7 @@ grafico_paf_sintetica <- ggplot(
     title = "Fração atribuível populacional sintética por sexo",
     subtitle = "Ponderação pelos óbitos da tábua de vida do IBGE de 2019; IC 95% bootstrap",
     x = NULL,
-    y = "Fração atribuível populacional",
+    y = "FAP",
     caption = paste0(
       "Fonte: IBGE, PNS 2019 e Tábua de Vida 2019; ",
       "DYNAMO-HIA (Lobstein; Jackson-Leach, 2010), riscos relativos por ",
@@ -1398,94 +1387,34 @@ grafico_pgev20 <- ggplot(
   ) +
   tema_abnt
 
-ggsave(
-  file.path(pasta_graficos, "01_paf_por_idade_e_sexo.png"),
+salvar_figura_abnt(
   grafico_paf_idade,
-  width = 8.27,
-  height = 5.6,
-  units = "in",
-  dpi = 320,
-  bg = "white"
+  file.path(pasta_graficos, "01_paf_por_idade_e_sexo"),
+  altura_cm = 11
 )
 
-ggsave(
-  file.path(pasta_graficos, "01_paf_por_idade_e_sexo.pdf"),
-  grafico_paf_idade,
-  width = 8.27,
-  height = 5.6,
-  units = "in"
-)
-
-ggsave(
-  file.path(pasta_graficos, "02_paf_sintetica_por_sexo.png"),
+salvar_figura_abnt(
   grafico_paf_sintetica,
-  width = 7.1,
-  height = 5.2,
-  units = "in",
-  dpi = 320,
-  bg = "white"
+  file.path(pasta_graficos, "02_paf_sintetica_por_sexo"),
+  altura_cm = 10
 )
 
-ggsave(
-  file.path(pasta_graficos, "02_paf_sintetica_por_sexo.pdf"),
-  grafico_paf_sintetica,
-  width = 7.1,
-  height = 5.2,
-  units = "in"
-)
-
-ggsave(
-  file.path(pasta_graficos, "03_mortes_evitaveis_por_idade_e_sexo.png"),
+salvar_figura_abnt(
   grafico_mortes_idade,
-  width = 8.27,
-  height = 5.6,
-  units = "in",
-  dpi = 320,
-  bg = "white"
+  file.path(pasta_graficos, "03_mortes_evitaveis_por_idade_e_sexo"),
+  altura_cm = 11
 )
 
-ggsave(
-  file.path(pasta_graficos, "03_mortes_evitaveis_por_idade_e_sexo.pdf"),
-  grafico_mortes_idade,
-  width = 8.27,
-  height = 5.6,
-  units = "in"
-)
-
-ggsave(
-  file.path(pasta_graficos, "04_mortes_evitaveis_por_sexo.png"),
+salvar_figura_abnt(
   grafico_mortes_total,
-  width = 7.1,
-  height = 5.2,
-  units = "in",
-  dpi = 320,
-  bg = "white"
+  file.path(pasta_graficos, "04_mortes_evitaveis_por_sexo"),
+  altura_cm = 10
 )
 
-ggsave(
-  file.path(pasta_graficos, "04_mortes_evitaveis_por_sexo.pdf"),
-  grafico_mortes_total,
-  width = 7.1,
-  height = 5.2,
-  units = "in"
-)
-
-ggsave(
-  file.path(pasta_graficos, "05_pgev20_por_sexo.png"),
+salvar_figura_abnt(
   grafico_pgev20,
-  width = 7.1,
-  height = 5.2,
-  units = "in",
-  dpi = 320,
-  bg = "white"
-)
-
-ggsave(
-  file.path(pasta_graficos, "05_pgev20_por_sexo.pdf"),
-  grafico_pgev20,
-  width = 7.1,
-  height = 5.2,
-  units = "in"
+  file.path(pasta_graficos, "05_pgev20_por_sexo"),
+  altura_cm = 10
 )
 
 message(
