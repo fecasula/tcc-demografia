@@ -1,6 +1,6 @@
 # tcc-demografia
 
-Código e resultados da análise estatística do TCC de Felipe Casula, *A obesidade sob uma perspectiva demográfica*. O estudo examina a evolução do excesso de peso e sua relação com a mortalidade da população brasileira de 20 anos ou mais, por sexo e grupo etário, de 2003 a 2019. [Site do TCC](https://fecasula.github.io/tcc-site/)
+Código e resultados da análise estatística do TCC de Felipe Casula, *A obesidade sob uma perspectiva demográfica*. O estudo examina a evolução do excesso de peso e sua relação com a mortalidade da população brasileira de 20 anos ou mais, por sexo e grupo etário, de 2003 a 2019. [Site do TCC](https://fecasula.github.io/tcc-demografia/)
 
 ## Análise estatística
 
