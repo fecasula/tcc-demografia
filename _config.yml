@@ -1,0 +1,10 @@
+exclude:
+  - dados
+  - doc
+  - graficos
+  - output
+  - script
+  - site
+  - LICENSE
+  - README.md
+  - tcc-demografia.Rproj

@@ -6,7 +6,7 @@ project:
 
 website:
   title: "Felipe Casula"
-  site-url: https://fecasula.github.io/tcc-demografia/
+  site-url: https://fecasula.github.io/tcc-demografia/publicacao/
   navbar:
     pinned: true
     left:
