@@ -22,7 +22,9 @@ jobs:
         run: |
           set -euo pipefail
           site_url=https://fecasula.github.io/tcc-demografia/
-          curl -fsSL --retry 3 --max-time 30 "$site_url" -o "$RUNNER_TEMP/index.html"
+          curl -fsSL --retry 3 --max-time 30 "$site_url" -o "$RUNNER_TEMP/entrada.html"
+          cmp index.html "$RUNNER_TEMP/entrada.html"
+          curl -fsSL --retry 3 --max-time 30 "${site_url}publicacao/" -o "$RUNNER_TEMP/index.html"
           cmp publicacao/index.html "$RUNNER_TEMP/index.html"
           curl -fsSL --retry 3 --max-time 30 "${site_url}publicacao/assets/tcc-felipe-casula.pdf" \
             -o "$RUNNER_TEMP/tcc-felipe-casula.pdf"
