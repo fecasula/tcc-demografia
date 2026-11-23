@@ -1,0 +1,33 @@
+---
+title: "INTRODUÇÃO"
+---
+
+::: {.texto-tcc}
+
+<p>O aumento da prevalência de sobrepeso e obesidade é um fenômeno global e traz consigo diversos desdobramentos na morbimortalidade das populações. Diante disso, o presente trabalho buscou estimar qual o impacto da obesidade sob os indicadores demográficos de mortalidade no Brasil entre os anos 2003 e 2019. Para realizar este objetivo, foi utilizada uma aplicação metodológica inaugurada por Preston e Stokes (2011), na qual se relacionam três tipos de fontes de dados: estimações de prevalência antropométrica para a população, tábuas de vida oficiais e parâmetros de Risco Relativo (RR) oriundos de estudos prospectivos. A partir dessas fontes de dados, a metodologia do autor calcula as Frações Atribuíveis Populacionais (FAP), que representa, para os fins desta análise, a fração do risco de mortalidade (e das mortes) atrelados à obesidade. Em seguida, a FAP é utilizada para construir uma tábua de vida contrafactual correspondente a um cenário hipotético no qual a obesidade se mostra completamente ausente. A comparação entre a tábua de vida oficial e a contrafactual nos permite estimar o impacto da obesidade sobre indicadores como expectativa de vida.</p>
+
+<p>Ao utilizar a FAP, a metodologia de Preston e Stokes parte do pressuposto de que a obesidade não é uma causa básica de morte, e sim um efeito de composição antropométrico. Em nenhum trabalho que se propôs a analisar a interação obesidade/mortalidade na perspectiva populacional houve um desenvolvimento conceitual acerca desse objeto. Nesse sentido, a segunda e a terceira seção do Desenvolvimento deste trabalho buscaram fazer uma primeira sistematização das categorias por trás da experiência de mortalidade em geral, e da interseção obesidade/mortalidade. Na seção de revisão bibliográfica, é descrito o percurso do estudo metodologicamente sofisticado acerca do impacto da obesidade na mortalidade populacional, enfatizando lacunas ainda presentes na literatura, trabalhos que representaram avanços significativos e o estudo da temática no Brasil.</p>
+
+<p>As demais seções de desenvolvimento se dedicam a apresentar a metodologia e os resultados das estimativas realizadas. Como fontes de dados, foram utilizados os microdados das Pesquisas de Orçamentos Familiares de 2002-2003 e 2008-2009 e das Pesquisas Nacionais de Saúde de 2013 e 2019, além das tábuas de mortalidade e projeções populacionais do IBGE, dos registros de óbitos do Sistema de Informações sobre Mortalidade e dos riscos relativos do projeto DYNAMO-HIA (Lobstein; Jackson-Leach, 2010). A investigação quantitativa foi organizada em duas etapas. Na primeira, analisou-se as prevalências antropométricas por sexo e grupo etário ao longo da série histórica. Na segunda etapa, foram realizadas as análises contrafactuais e a estimação do número absoluto de mortes relacionados à obesidade, das Frações Atribuíveis Populacionais e dos Potenciais Ganhos em Expectativa de Vida.</p>
+
+<h2>REFERÊNCIAS</h2>
+
+<p class="referencia">BRASIL. Ministério da Saúde. Sistema de Informações sobre Mortalidade — SIM. Brasília, DF: Ministério da Saúde. Disponível em: https://www.gov.br/saude/pt-br/composicao/svsa/sistemas-de-informacao/sim. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">IBGE - INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Pesquisa de Orçamentos Familiares 2002-2003: microdados. Rio de Janeiro: IBGE. Disponível em: https://ftp.ibge.gov.br/Orcamentos_Familiares/Pesquisa_de_Orcamentos_Familiares_2002_2003/Microdados/. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">IBGE - INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Pesquisa de Orçamentos Familiares 2008-2009: microdados. Rio de Janeiro: IBGE. Disponível em: https://ftp.ibge.gov.br/Orcamentos_Familiares/Pesquisa_de_Orcamentos_Familiares_2008_2009/Microdados/. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">IBGE - INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Pesquisa Nacional de Saúde 2013: microdados. Rio de Janeiro: IBGE. Disponível em: https://ftp.ibge.gov.br/PNS/2013/Microdados/. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">IBGE - INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Pesquisa Nacional de Saúde 2019: microdados. Rio de Janeiro: IBGE. Disponível em: https://ftp.ibge.gov.br/PNS/2019/Microdados/. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">IBGE — INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Projeções da População do Brasil e Unidades da Federação: revisão 2024. Rio de Janeiro: IBGE, 2024.</p>
+
+<p class="referencia">IBGE - INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Tábuas Completas de Mortalidade. Rio de Janeiro: IBGE. Disponível em: https://www.ibge.gov.br/estatisticas/sociais/populacao/9126-tabuas-completas-de-mortalidade.html. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">LOBSTEIN, T.; JACKSON-LEACH, R. Workpackage 7: Overweight and Obesity: report on data collection for overweight and obesity prevalence and related relative risks. London: International Association for the Study of Obesity, 2010.</p>
+
+<p class="referencia">PRESTON, S. H.; STOKES, A. Contribution of obesity to international differences in life expectancy. American Journal of Public Health, v. 101, n. 11, p. 2137-2143, 2011. DOI: 10.2105/AJPH.2011.300219.</p>
+
+:::

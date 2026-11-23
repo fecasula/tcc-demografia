@@ -1,0 +1,49 @@
+---
+title: "Elementos pré-textuais"
+---
+
+::: {.texto-tcc}
+
+<h2 id="pre-textual-1">CAPA</h2>
+
+<figure class="reproducao">
+  <a href="assets/documento/lista-p1.webp"><img src="assets/documento/lista-p1.webp" alt="CAPA" loading="lazy"></a>
+</figure>
+
+<h2 id="pre-textual-2">FOLHA DE ROSTO</h2>
+
+<figure class="reproducao">
+  <a href="assets/documento/lista-p2.webp"><img src="assets/documento/lista-p2.webp" alt="FOLHA DE ROSTO" loading="lazy"></a>
+</figure>
+
+<h2 id="pre-textual-3">FOLHA DE APROVAÇÃO</h2>
+
+<h2 id="pre-textual-7">LISTA DE ILUSTRAÇÕES</h2>
+
+<figure class="reproducao">
+  <a href="assets/documento/lista-p7.webp"><img src="assets/documento/lista-p7.webp" alt="LISTA DE ILUSTRAÇÕES" loading="lazy"></a>
+</figure>
+
+<h2 id="pre-textual-8">LISTA DE TABELAS E QUADROS</h2>
+
+<figure class="reproducao">
+  <a href="assets/documento/lista-p8.webp"><img src="assets/documento/lista-p8.webp" alt="LISTA DE TABELAS E QUADROS" loading="lazy"></a>
+</figure>
+
+<h2 id="pre-textual-9">LISTA DE ABREVIATURAS E SIGLAS</h2>
+
+<figure class="reproducao">
+  <a href="assets/documento/lista-p9.webp"><img src="assets/documento/lista-p9.webp" alt="LISTA DE ABREVIATURAS E SIGLAS" loading="lazy"></a>
+</figure>
+
+<h2 id="pre-textual-10">SUMÁRIO</h2>
+
+<figure class="reproducao">
+  <a href="assets/documento/lista-p10.webp"><img src="assets/documento/lista-p10.webp" alt="SUMÁRIO" loading="lazy"></a>
+</figure>
+
+<figure class="reproducao">
+  <a href="assets/documento/lista-p11.webp"><img src="assets/documento/lista-p11.webp" alt="SUMÁRIO" loading="lazy"></a>
+</figure>
+
+:::

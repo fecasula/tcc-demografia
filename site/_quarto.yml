@@ -9,14 +9,30 @@ website:
   navbar:
     pinned: true
     left:
-      - text: "Resumo"
-        href: index.qmd#resumo
-      - text: "Metodologia"
-        href: index.qmd#metodologia
-      - text: "Resultados"
-        href: index.qmd#resultados
+      - text: "Início"
+        href: index.qmd
+      - text: "Introdução"
+        href: introducao.qmd
+      - text: "Desenvolvimento"
+        menu:
+          - text: "Revisão bibliográfica"
+            href: revisao-bibliografica.qmd
+          - text: "Metodologia"
+            href: metodologia.qmd
+          - text: "Resultados"
+            href: resultados.qmd
       - text: "Conclusão"
-        href: index.qmd#conclusao
+        href: conclusao.qmd
+      - text: "Referências"
+        href: referencias.qmd
+      - text: "Anexos"
+        href: anexos.qmd
+      - text: "Mais"
+        menu:
+          - text: "Agradecimentos"
+            href: agradecimentos.qmd
+          - text: "Elementos pré-textuais"
+            href: listas.qmd
     right:
       - icon: github
         text: "GitHub"

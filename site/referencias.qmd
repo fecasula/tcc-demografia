@@ -1,0 +1,53 @@
+---
+title: "REFERÊNCIAS"
+---
+
+::: {.texto-tcc}
+
+<p class="referencia">ANDRADE, Luís Jesuino de Oliveira et al. Impact of Premature Mortality Attributable to Obesity on Years of Life Lost in Brazil. medRxiv, , 19 out. 2025. Disponível em: &lt;https://www.medrxiv.org/content/10.1101/2025.10.16.25338192v1&gt;. Acesso em: 31 out. 2025</p>
+
+<p class="referencia">BEAUMONT, J.-F.; PATAK, Z. On the generalized bootstrap for sample surveys with special attention to Poisson sampling. International Statistical Review, v. 80, n. 1, p. 127-148, 2012. DOI: 10.1111/j.1751-5823.2011.00166.x.</p>
+
+<p class="referencia">BELTRÁN-SÁNCHEZ, H.; PRESTON, S. H.; CANUDAS-ROMO, V. An integrated approach to cause-deleted life tables. Demographic Research, v. 19, art. 35, p. 1323-1350, 2008. DOI: 10.4054/DemRes.2008.19.35.</p>
+
+<p class="referencia">BRASIL. Ministério da Saúde. Sistema de Informações sobre Mortalidade — SIM. Brasília, DF: Ministério da Saúde. Disponível em: https://www.gov.br/saude/pt-br/composicao/svsa/sistemas-de-informacao/sim. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">DI ANGELANTONIO, Emanuele et al. Body-mass index and all-cause mortality: individual-participant-data meta-analysis of 239 prospective studies in four continents. Lancet, v. 388, n. 10046, p. 776–786, 20 ago. 2016.</p>
+
+<p class="referencia">FONTAINE, Kevin R. et al. Years of life lost due to obesity. JAMA, v. 289, n. 2, p. 187–193, 8 jan. 2003.</p>
+
+<p class="referencia">GARCIA, Cecilia Alcantara Braga et al. Obesity and Associated Factors in Brazilian Adults: Systematic Review and Meta-Analysis of Representative Studies. International Journal of Environmental Research and Public Health, v. 21, n. 8, p. 1022, ago. 2024.</p>
+
+<p class="referencia">IBGE - INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Pesquisa de Orçamentos Familiares 2002-2003: microdados. Rio de Janeiro: IBGE. Disponível em: https://ftp.ibge.gov.br/Orcamentos_Familiares/Pesquisa_de_Orcamentos_Familiares_2002_2003/Microdados/. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">IBGE - INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Pesquisa de Orçamentos Familiares 2008-2009: microdados. Rio de Janeiro: IBGE. Disponível em: https://ftp.ibge.gov.br/Orcamentos_Familiares/Pesquisa_de_Orcamentos_Familiares_2008_2009/Microdados/. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">IBGE - INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Pesquisa Nacional de Saúde 2013: microdados. Rio de Janeiro: IBGE. Disponível em: https://ftp.ibge.gov.br/PNS/2013/Microdados/. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">IBGE - INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Pesquisa Nacional de Saúde 2019: microdados. Rio de Janeiro: IBGE. Disponível em: https://ftp.ibge.gov.br/PNS/2019/Microdados/. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">IBGE — INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Projeções da População do Brasil e Unidades da Federação: revisão 2024. Rio de Janeiro: IBGE, 2024.</p>
+
+<p class="referencia">IBGE - INSTITUTO BRASILEIRO DE GEOGRAFIA E ESTATÍSTICA. Tábuas Completas de Mortalidade. Rio de Janeiro: IBGE. Disponível em: https://www.ibge.gov.br/estatisticas/sociais/populacao/9126-tabuas-completas-de-mortalidade.html. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">LOBSTEIN, T.; JACKSON-LEACH, R. Workpackage 7: Overweight and Obesity: report on data collection for overweight and obesity prevalence and related relative risks. London: International Association for the Study of Obesity, 2010.</p>
+
+<p class="referencia">LUMLEY, T. Analysis of complex survey samples. Journal of Statistical Software, v. 9, n. 8, p. 1-19, 2004. DOI: 10.18637/jss.v009.i08.</p>
+
+<p class="referencia">LUMLEY, T. Complex Surveys: a guide to analysis using R. Hoboken: Wiley, 2010. DOI: 10.1002/9780470580066.</p>
+
+<p class="referencia">PRESTON, S. H.; STOKES, A. Contribution of obesity to international differences in life expectancy. American Journal of Public Health, v. 101, n. 11, p. 2137-2143, 2011. DOI: 10.2105/AJPH.2011.300219.</p>
+
+<p class="referencia">RABACOW, F. M.; AZEREDO, C. M.; REZENDE, L. F. M. Deaths attributable to high body mass in Brazil. Preventing Chronic Disease, v. 16, E141, 2019. DOI: 10.5888/pcd16.190143.</p>
+
+<p class="referencia">SILVA, P. L. N.; DIAS, A. J. R. Amostragem com R. 2020. Disponível em: https://amostragemcomr.github.io/livro/. Acesso em: 31 ago. 2026.</p>
+
+<p class="referencia">SOUZA-JÚNIOR, P. R. B. et al. Desenho da amostra da Pesquisa Nacional de Saúde 2013. Epidemiologia e Serviços de Saúde, v. 24, n. 2, p. 207-216, 2015. DOI: 10.5123/S1679-49742015000200003.</p>
+
+<p class="referencia">STOPA, S. R. et al. Pesquisa Nacional de Saúde 2019: histórico, métodos e perspectivas. Epidemiologia e Serviços de Saúde, v. 29, n. 5, e2020315, 2020. DOI: 10.1590/S1679-49742020000500004.</p>
+
+<p class="referencia">VIDRA, N.; TRIAS-LLIMÓS, S.; JANSSEN, F. Impact of obesity on life expectancy among different European countries: secondary analysis of population-level data over the 1975-2012 period. BMJ Open, v. 9, e028086, 2019. DOI: 10.1136/bmjopen-2018-028086.</p>
+
+<p class="referencia">YI, S.-W.; OHRR, H.; SHIN, S.-A.; YI, J.-J. Sex-age-specific association of body mass index with all-cause mortality among 12.8 million Korean adults: a prospective cohort study. International Journal of Epidemiology, v. 44, n. 5, p. 1696-1705, 2015. DOI: 10.1093/ije/dyv138.</p>
+
+:::

@@ -1,0 +1,29 @@
+---
+title: "AGRADECIMENTOS"
+---
+
+::: {.texto-tcc}
+
+<p>Agradeço ao meu orientador, Cássio Turra, pelos conselhos e direcionamentos que estiveram por trás dos meus primeiros passos no campo da Demografia ao longo dos últimos três anos.</p>
+
+<p>Agradeço ao meu coorientador, Reinaldo dos Santos, pela prontidão e pelo apoio no desenvolvimento deste trabalho.</p>
+
+<p>Agradeço a todos os professores do curso de Ciências Sociais que fizeram parte da minha formação, em especial à Ana Marcela Ardila, pelo convite para contribuir com as pesquisas conduzidas no Centro de Estudos Urbanos e pela confiança no meu trabalho.</p>
+
+<p>Agradeço ao professor Caio Gonçalves, do departamento de Demografia, por me introduzir à análise de dados de pesquisas amostrais, conteúdo este tão necessário para a formação de cientistas sociais interessados em métodos quantitativos.</p>
+
+<p>Agradeço à Maria Eugenia Baeta e à Jacqueline Casula por me ensinarem, através do exemplo, o valor do estudo e do trabalho.</p>
+
+<p>Agradeço ao Fernando Casula por todo o apoio desde sempre, em especial desde o momento em que escolhi cursar Ciências Sociais.</p>
+
+<p>Agradeço à Sofia Baeta e à Ana Clara por serem uma fonte de alegria e conforto na minha vida.</p>
+
+<p>Agradeço aos meus tios, Mauro e Vania, pelo constante incentivo à leitura.</p>
+
+<p>Agradeço à minha namorada, Paula Rocha, pelo amor, companheirismo e apoio que compartilhamos.</p>
+
+<p>Agradeço aos meus amigos e colegas de luta contra moinhos de vento: Lucas Latini, Daniel Pimenta, Felipe e João Boscolo, Nicolas Penna, Marina e Joana Caetano, Flores, Tácio e Bibi, Johann Emmerich, Lucas Damas e Lucas Moreira.</p>
+
+<p>Agradeço à Biblioteca J. Baeta Vianna e às bibliotecas das Faculdades de Ciências Econômicas e de Letras da UFMG, onde passei boa parte dos últimos anos.</p>
+
+:::
