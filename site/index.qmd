@@ -1,5 +1,5 @@
 ---
-pagetitle: "A obesidade sob uma perspectiva demográfica · Felipe Casula"
+pagetitle: "A obesidade sob uma perspectiva demográfica · Felipe Baeta Casula Pereira"
 filters:
   - apresentacao.lua
 ---
@@ -15,7 +15,7 @@ filters:
     <div class="capa-visual">
       <img src="assets/figuras/capa.webp" alt="Evolução do potencial ganho em expectativa de vida aos 20 anos">
       <dl class="autoria">
-        <dt>Autor</dt><dd>Felipe Casula</dd>
+        <dt>Autor</dt><dd>Felipe Baeta Casula Pereira</dd>
         <dt>Orientador</dt><dd>Cássio Maldonado Turra</dd>
         <dt>Coorientador</dt><dd>Reinaldo Onofre dos Santos</dd>
       </dl>

@@ -26,6 +26,8 @@ jobs:
           cmp index.html "$RUNNER_TEMP/entrada.html"
           curl -fsSL --retry 3 --max-time 30 "${site_url}publicacao/" -o "$RUNNER_TEMP/index.html"
           cmp publicacao/index.html "$RUNNER_TEMP/index.html"
+          curl -fsSL --retry 3 --max-time 30 "${site_url}publicacao/conclusao.html" -o "$RUNNER_TEMP/conclusao.html"
+          cmp publicacao/conclusao.html "$RUNNER_TEMP/conclusao.html"
           curl -fsSL --retry 3 --max-time 30 "${site_url}publicacao/assets/tcc-felipe-casula.pdf" \
             -o "$RUNNER_TEMP/tcc-felipe-casula.pdf"
           cmp publicacao/assets/tcc-felipe-casula.pdf "$RUNNER_TEMP/tcc-felipe-casula.pdf"
