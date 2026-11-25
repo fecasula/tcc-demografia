@@ -48,3 +48,11 @@ formas_pesquisas_abnt <- c(
   "PNS 2013" = 15,
   "PNS 2019" = 18
 )
+
+salvar_conjunto_abnt <- function(graficos, pasta, alturas_cm) {
+  for (i in seq_along(graficos)) {
+    salvar_figura_abnt(
+      graficos[[i]], file.path(pasta, names(graficos)[i]), alturas_cm[i]
+    )
+  }
+}

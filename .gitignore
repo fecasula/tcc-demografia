@@ -48,3 +48,6 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 .positai
+
+# Imagens geradas para a apresentação
+/graficos_ppt/

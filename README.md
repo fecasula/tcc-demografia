@@ -60,6 +60,16 @@ Os PDFs vetoriais e os PNGs foram preparados para uso no documento A4. As figura
 | 8 | [Total de mortes evitáveis](graficos/comparacao_4_ondas/04_mortes_evitaveis_4_ondas.pdf) |
 | 9 | [Ganho potencial em expectativa de vida aos 20 anos](graficos/comparacao_4_ondas/05_pgev20_4_ondas.pdf) |
 
+## Figuras para PowerPoint
+
+Na raiz do projeto, gere as figuras da apresentação com:
+
+```sh
+Rscript script/gerar_graficos_ppt.R
+```
+
+No Console do RStudio, o equivalente é `source("script/gerar_graficos_ppt.R")`. O script lê os CSVs de resultados existentes e salva 29 PNGs de 2.400 × 1.350 pixels (16:9) em `graficos_ppt/`, em subpastas de prevalência, comparação das quatro ondas e resultados por pesquisa. As figuras trazem títulos, fontes e rótulos dimensionados para slides.
+
 ## Site Quarto
 
 ```sh
